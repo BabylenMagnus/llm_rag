@@ -1,0 +1,258 @@
+Мета-обучение
+Мета-обучение(англ. Meta-learning) — подход, позволяющий определять наиболее подходящий алгоритм (иногда, вместе с параметрами к нему) для конкретной задачи из портфолио алгоритмов. Основная идея мета-обучения — свести задачу выбора алгоритма к задаче обучения с учителем: задачи описываются мета-признаками. Мета-признак описывает свойство задачи — например, разрежен ли датасет или нет, число категориальных или численных признаков объектов в датасете, число возможных меток, размер датасета и многое другое.
+От хорошей модели ожидается высокая адаптируемость к новым задачам и окружениям, на небольшом количестве примеров.
+Содержание
+- 1 Обзор
+- 2 Оптимизации методов Мета-обучения
+- 3 Определение множества конфигураций
+- 4 Ориентиры (англ. landmarks)
+- 5 Примечания
+- 6 См. Также
+- 7 Источники информации
+Обзор
+Модель должна быть обучена на множестве задач и оптимизирована для лучшей производительности на нескольких задачах, включая такие, с которыми модель не сталкивалась ранее. Каждой задаче соответствует множество наборов данных $\mathcal{D}$, каждый из которых содержит и векторы признаков и разметку. Оптимальные параметры модели:
+\begin{aligned} \theta^* = \arg\min_\theta \mathbb{E}_{\mathcal{D}\sim p(\mathcal{D})} [\mathcal{L}_\theta(\mathcal{D})] \end{aligned}
+Очень похоже на обычную задачу машинного обучения, только один датасет принимается за один образец данных.
+Ограничения — Теорема о том, что бесплатного завтрака не бывает(англ. No Free Lunch Theorem, сокр. NFL) theorem[1][2] , доказанная в 1996 году.
+|Теорема (No free Lunch Theorem):
+Пусть— условная вероятность получения частного решения $d_m$ после $m$ итераций работы алгоритма $a$ при целевой функции $f$. Для любой пары алгоритмов $a_1$ и $a_2$ имеет место равенство:
+Иными словами, если встречается задача, которая не похожа на то, что решалось ранее, то мы не сможем сразу придумать для него эффективное решение.
+Общая идея мета-обучения: для каждого набора данных $d \in \mathcal{D}$ вычисляется вектор мета-признаков, которые описывают свойства этого набора данных. Ими могут быть: число категориальных или численных признаков объектов в $d$, число возможных меток, размер $d$ и многие другие[3]. Подробнее о конкретных метапризнаках смотреть ниже
+Каждый алгоритм запускается на всех наборах данных из $\mathcal{D}$. После этого вычисляется эмпирический риск, на основе которого формируются метки классов. Затем мета-классификатор обучается на полученных результатах. В качестве описания набора данных выступает вектор мета-признаков, а в качестве метки — алгоритм, оказавшийся самым эффективным с точки зрения заранее выбранной меры качества.
+Каждый датасет $d \in \mathcal{D}$ содержит пары признаков и меток, $\{(x_i, y_i)\}$, каждая метка принадлежит известному множеству меток $\mathcal{T}$. Датасет $d$ делится на две части: $d=\langle S, B\rangle$, обучающую $S$ и тестовую $B$ выборки. Часто принимается k-shot N-class задача — обучающая выборка содержит $k$ размеченных примеров для каждого из $N$ классов. Скажем, наш классификатор $f_\theta$ с параметром $\theta$ показывает вероятность принадлежности точки из данных к классу $y$ при векторе признаков, $P_\theta(y|x)$. Оптимальные параметры должны максимизировать вероятность получения верных меток среди нескольких обучающих выборок $Bsub\mathcal{D}$:
+\begin{aligned} \theta^* &= {\arg\max}_{\theta} \mathbb{E}_{(\mathbf{x}, y)\in \mathcal{D}}[P_\theta(y \vert \mathbf{x})] & \\ \theta^* &= {\arg\max}_{\theta} \mathbb{E}_{B\subset \mathcal{D}}[\sum_{(\mathbf{x}, y)\in B}P_\theta(y \vert \mathbf{x})] & \\ \end{aligned}
+В пристрелочной (few-shot) классификации цель — уменьшить ошибку предсказания на неразмеченных данных. Чтобы его ускорить, сделаем следующее:
+- Возьмем подмножество меток, $T\subset\mathcal{T}$
+- Возьмем обучающее множество $S^TsubD$ и обучающую выборку $B^TsubD$. Оба содержат только данные с метками из подмножества с пункта 1: $L, y \in L, \forall (x, y) \in S^T, B^T$
+- Множество $S^T$ подается на вход модели
+- Конечная оптимизация использует множество $B^T$, чтобы посчитать функцию потерь и обновить параметры модели через обратное распространение, так же, как это делается в обучении с учителем.
+\begin{aligned} \theta = \arg\max_\theta \color{red}{\mathbb{E}_{T \sim \mathcal{T}}}[ \mathbb{E}_{\color{red}{S \sim T,} B \color{red}{\sim T}} [\sum_{(x, y) \in B} P_\theta(y \vert \mathbf{x} \color{red}{, S})]] \end{aligned} Красным цветом выделена разница между обучением с учителем и подходом мета-обучения.
+Идея в некоторой степени аналогична использованию предварительно обученной модели в классификации изображений (ImageNet) или в NLP (большие текстовые корпуса), когда доступен только ограниченный набор образцов данных для конкретной задачи. Модель обучается таким образом, чтобы она могла обобщиться до других датасетов.
+Оптимизации методов Мета-обучения
+LSTM-meta-learner
+Оптимизационный алгоритм может быть явно смоделирован. Рави и Ларошель [4] это и сделали и назвали его "meta-learner". Цель meta-learner'а — эффективно обновлять свои параметры используя небольшую обучающую выборку так, чтобы learner мог быстро адаптироваться к новым задачам.
+Пусть модель ученика будет $M_\theta$, параметризованной $\theta$, и meta-learner как $R_\theta$ с параметром $\theta$, и функция потерь $\mathcal{L}$.
+Обновление параметров learner'a во время $t$ со скоростью обучения $\alpha_t$ (шаг градиентного спуска):
+\begin{aligned} \theta_t = \theta_{t-1} - \alpha_t \nabla_{\theta_{t-1}}\mathcal{L}_t \end{aligned}
+Обновление памяти ячейки LSTM выглядит так:
+\begin{aligned} c_t = f_t \odot c_{t-1} + i_t \odot \tilde{c}_t = \theta_{t-1} - \alpha_t\nabla_{\theta_{t-1}}\mathcal{L}_t \end{aligned}
+$c_t$ — параметры сети $\theta_t$, $\tilde{c}_t = -\nabla_{\theta_{t-1}}\mathcal{L}_t$ при $f_t$ = 1.
+$f_t$ = 1, $\tilde{c}_t = -\nabla_{\theta_{t-1}}\mathcal{L}_t$ - не оптимальные значения, их изменение может оказаться полезным, если вы попали в неудачный локальный минимум.
+\begin{aligned} f_t &= \sigma(\mathbf{W}_f \cdot [\nabla_{\theta_{t-1}}\mathcal{L}_t, \mathcal{L}_t, \theta_{t-1}, f_{t-1}] + \mathbf{b}_f) & \\ i_t &= \sigma(\mathbf{W}_i \cdot [\nabla_{\theta_{t-1}}\mathcal{L}_t, \mathcal{L}_t, \theta_{t-1}, i_{t-1}] + \mathbf{b}_i) & \\ \tilde{\theta}_t &= -\nabla_{\theta_{t-1}}\mathcal{L}_t & \\ \theta_t &= f_t \odot \theta_{t-1} + i_t \odot \tilde{\theta}_t & \\ \end{aligned} $f_t$ — как сильно мы забываем старые значения параметров на шаге $t$, $i_t$ — рейт обучения на шаге $t$.
+REPTILE
+Reptile — относительно простой алгоритм мета-обучения, похожий на MAML, например, тем, что оба используют мета-оптимизацию через градиентный спуск и оба не чувствительны к модели.
+- Случайным образом разбиваем задачук на подмножества
+- тренируемся на ней несколькими шагами градиентного спуска
+- сдвигаем веса модели к новым параметрам.
+$\text{SGD}(\mathcal{L}_{\tau_i}, \theta, k)$ выполняет стохастический градиентный спуск на $k$ шагов c функцией потерь $\mathcal{L}_{\tau_i}$, начиная с параметра $\theta$ и возвращает конечный вектор параметров. Градиент reptile определяется как $(\theta - W)/\alpha$, где $\alpha$ — размер шага, используемый функцией $SGD$.
+// Алгоритм REPTILE Initialize $\theta$ for $iteration = 1, 2,...$ do Sample tasks $\tau_1, \tau_2, ..., \tau_n$ for $i = 1, 2, ..., n$ do Compute $W_i = \text{SGD}(\mathcal{L}_{\tau_i}, \theta, k)$ end for Update $\theta \leftarrow \theta + \beta 1/n \sum (W_i - \theta)$ end for
+Определение множества конфигураций
+Предшествующие вычисления могут быть также использованы для изучения пространства более успешных конфигураций $\theta^{\star}$. Более подходящие под задачу конфигурации могут серьезно ускорить поиск оптимальных моделей, это важно при ограниченных вычислительных ресурсах.
+Альтернативный подход сперва узнать оптимальные гиперпараметры, а потом через приращение производительности определить важность каждого из гиперпараметров. Это и было сделано в лаборатории OpenML, где провели около 500 000 экспериментов на 6 алгоритмах, использовав при этом 38 датасетах. Стандартные значения изучались вместе для всех гиперпараметров алгоритма посредством обучения суррогатных моделей на большом числе задач. После того, как уже проверены многие варианты конфигураций, выбирается такая, которая минимизирует средний риск для всех задач, и становится стандартной. Далее определяется важность каждого из гиперпараметров. Чем больше меняется приращение производительности, тем более важный гиперпараметр мы изменяем.
+Если мы хотим предоставить рекомендации для конкретной задачи $t_{new}$, нам нужна дополнительная информация о том, насколько $t_{new}$ похожа на предыдущие задачи $t_j$. Первый способ — посчитать число рекомендованных конфигураций для $t_{new}$,получая новое докозательство $\mathbf{P}_{new}$. Если позже мы будем наблюдать, что вычисления $P_{i,new}$ соответствуют $P_{i, j}$, то $t_{j}$ и $t_{new}$ могут быть очень похожими. Мы можем применить это знания для обучения meta-learner'a который предсказывает множество рекомендуемых конфигураций $\Theta^{*}_{new}$ for $t_{new}$. Более того, можно пойти дальше и добавить $\Theta^{*}_{new}$ в $P_{new$ и перейти к следующей итерации и выяснять какие еще задачи схожи друг с другом.
+Суррогатные модели
+Более гибкий способ передать информацию — построить суррогатную модель $s_{j}(\theta_{i}) = P_{i,j}$ для всех предшествующих задач $t_{j}$, обученную с использованием всех доступных $\mathbf{P}$. Можно определить "похожесть" задач в терминах ошибок между $s_{j}(\theta_{i})$ и $P_{i,new}$: если суррогатная модель для $t_{j}$ может генерировать точные предсказания для $t_{new}$, тогда такие задачи весьма похожи. Обычно это делается в комбинации с Байесовской оптимизацией для определения следующей $\theta_{i}$.
+Так же можно обучать суррогатные модели на Гауссовских процессах (GP) для каждой предыдущей задачи и еще одну для $t_{new}$ и объединить их во взвешенную и нормализованную сумму, с медианой $\mu$ определенной как взвешанная сумма $\mu_{j}$ полученных из задач $t_{j}$. Веса $\mu_{j}$ считаются методом Надарая-Ватсона[5], где каждая задача представлена вектором относительных ориентиров (англ. relative landmarks) или ядром Епанечникова[6], используется для определения похожести между векторами относительных ориентиров для $t_{j}$ и $t_{new}$. Чем больше $t_{j}$ похожа на $t_{new}$, тем больше получится вес $s_{j}$, увеличивающий влияние суррогатной модели для $t_{j}$.
+Суррогатные модели обучаются только на $P_{i, new}$, а следующий $\theta_{i}$ получается путем нахождения средневзвешенного expected improvement $P_{i, new}$ и предсказанных улучшений на всех предшествующих $P_{i, j}$. Веса предшествующих задач могут быть переопределены через точность суррогатной модели или через относительных ориентиров. Вес ожидаемого улучшения (expected improvement) постепенно возрастает с каждой итерацией (с увеличением собранного эвиденса $P_{i, new}$).
+Обучение на свойствах задачи (learning on task properties)
+Каждая задача $t_{j} \in T$ может быть описана вектором $m(t_j) = (m_{j,1}, ...,m_{j,K})$ из $K$ мета-признаков $m_{j, k} \in M$,где $M$ — множество мета-признаков. Можно определить меру "похожести" задач, основанную, например, на Евклидовом расстоянии между $m(t_i)$ и $m(t_j)$, тогда можно будет использовать информацию из наиболее похожей задачи на новую задачу $t_{new}$. Более того, используя предшествующие вычисления $\textbf{P}$ можно обучить meta-learner'a $L$ предсказывать производительность $P_{i, new}$ конфигураций $\theta_{i}$ на новых задачах $t_{new}$.
+$L: \Theta \times M \rightarrow \textbf{P}$
+В таблице ниже представлен обзор наиболее используемых мета-признаков.
+|Название
+|Формула
+|Объяснение
+|Варианты
+|простые
+|instances
+|$n$
+|Speed, Scalability[7]
+|$p/n$, $log(n)$, log(n/p)
+|features
+|$p$
+|Curse of dimensionality
+|$log(p)$, % categorical
+|classes
+|$c$
+|Complexity, imbalance
+|ratio min/maj class
+|Percent of missing values
+|$m$
+|Imputation effects [8]
+|% missing
+|outliers
+|$o$
+|Data noisiness [9]
+|$o/n$
+|статистические
+|Skewness
+|$\frac{E(X-\mu_{X})^{3}}{\sigma_{X}^{3}}$
+|Feature normality
+|min,max,$\mu$,$\sigma$,$q_{1},q_{3}$
+|Kurtosis
+|$\frac{E(X-\mu_{X})^{4}}{\sigma_{X}^{4}}$
+|Feature normality
+|min,max,$\mu$,$\sigma$,$q_{1},q_{3}$
+|Correlation
+|$\rho_{X_{1}X_{2}}$
+|Feature interdependence
+|min,max,$\mu$,$\sigma$,$\rho_{XY}$
+|Covariance
+|$cov_{X_{1}X_{2}}$
+|Feature interdependence
+|min,max,$\mu$,$\sigma$,$cov_{XY}$
+|Concentration
+|$\tau_{X_{1}X_{2}}$
+|Feature interdependence [10]
+|min,max,$\mu$,$\sigma$,$\tau_{XY}$
+|Sparsity
+|sparsity(X)
+|Degree of discreteness [11]
+|min,max,$\mu$,$\sigma$
+|Gravity
+|gravity(X)
+|Inter-class dispersion [12]
+|ANOVA p-value
+|$p_{val_{\texttt{X}_{1}X_{2}}}$
+|Feature redundancy
+|$p_{val_{XY}}$
+|Coeff. of variation
+|$\frac{\sigma_{Y}}{\mu_{Y}}$
+|Variation in target [13]
+|PCA $\rho_{\lambda_{1}}$
+|$\sqrt{\frac{\lambda_{1}}{1+\lambda_{1}}}$
+|Variance in first PC
+|$\frac{\lambda_{1}}{\sum_{i} \lambda_{i}}$
+|PCA skewness
+|Skewness of first PC
+|PCA kurtosis
+|PCA 95\%
+|$\frac{dim_{95\% var}}{p}$
+|Intrinsic dimensionality [14]
+|Class probability
+|$P(\texttt{C})$
+|Class distribution
+|min,max,$\mu$,$\sigma$
+|информационно-теоретические
+|Class entropy
+|$H(\texttt{C})$
+|Class imbalance
+|Norm. entropy
+|$\frac{H(\texttt{X})}{log_{2}n}$
+|Feature informativeness [15]
+|min,max,$\mu$,$\sigma$
+|Mutual inform.
+|$MI(\texttt{C},\texttt{X})$
+|Feature importance
+|min,max,$\mu$,$\sigma$
+|Uncertainty coeff.
+|$\frac{MI(\texttt{C},\texttt{X})}{H(\texttt{C})}$
+|[16]
+|min,max,$\mu$,$\sigma$
+|Equiv. nr. feats
+|$\frac{H(C)}{\overline{MI(C,X)}}$
+|Intrinsic dimensionality
+|Noise-signal ratio
+|$\frac{\overline{H(X)}-\overline{MI(C,X)}}{\overline{MI(C,X)}}$
+|Noisiness of data
+|сложностные
+|Fisher's discrimin.
+|$\frac{(\mu_{c1}-\mu_{c2})^{2}}{\sigma_{c1}^{2}-\sigma_{c2}^{2}}$
+|Separability classes $c_{1},c_{2}$
+|Volume of overlap
+|Class distribution overlap [17]
+|Concept variation
+|Task complexity [18]
+|Data consistency
+|Data quality [19]
+|основанные на модели
+|# nodes, leaves
+|Concept complexity [20]
+|Tree depth
+|Branch length
+|Concept complexity
+|min,max,$\mu$,$\sigma$
+|Nodes per feature
+|Feature importance
+|min,max,$\mu$,$\sigma$
+|Leaves per class
+|Class complexity [21]
+|min,max,$\mu$,$\sigma$
+|Leaves agreement
+|Class separability [22]
+|min,max,$\mu$,$\sigma$
+|Information gain
+|Feature importance
+|min,max,$\mu$,$\sigma$, gini
+|ориентиры (landmarks)
+|Landmarker(1NN)
+|$P(\theta_{1NN},t_{j})$
+|Data sparsity [23]
+|Landmarker(Tree)
+|$P(\theta_{Tree},t_{j})$
+|Data separability
+|Stump,RandomTree
+|Landmarker(Lin)
+|$P(\theta_{Lin},t_{j})$
+|Linear separability
+|Lin.Discriminant
+|Landmarker(NB)
+|$P(\theta_{NB},t_{j})$
+|Feature independence
+|[24]
+|Relative LM
+|$P_{a,j} - P_{b,j}$
+|Probing performance [25]
+|Subsample LM
+|$P(\theta_{i},t_{j},s_{t})$
+|Probing performance [26]
+Непрерывные признаки $X$ и таргет $Y$ имеют медиану $\mu_{X}$, стандартное отклонение $\sigma_{X}$ и дисперсию $\sigma^{2}_{X}$. Категориальные признаки $\texttt{X}$ и класс $\texttt{C}$ имеют категориальные значения $\pi_{i}$, условные вероятности $\pi_{i|j}$, совместные вероятности $\pi_{i,j}$, предельные вероятности $\pi_{i+}=\sum_{j}\pi_{ij}$ и энтропию $H(\texttt{X})=-\sum_{i}\pi_{i+}log_{2}(\pi_{i+})$.
+Многие мета-признаки вычисляются по одиночным признакам или их комбинации, и должны быть агрегированы через min, max, $\mu$, $\sigma$, квартили или гистограммы.
+Во время вычисления похожести задач важно нормализовать все мета-признаки, использовать отбор признаков [27] или использовать уменьшение размерности (например, principal component analisys — PCA).
+Ориентиры (англ. landmarks)
+Ориентиры — один из подходов для описания задач мета-обучения. В отличие от предшественников, использовавших только статистические метрики, ориентиры стараются определить расположение конкретной задачи мета-обучения в пространстве всех задач обучения, измеряя производительность некоторых простых и эффективных алгоритмов. Таким образом, можно сказать, что алгоритм обучения сам характеризуют задачу.
+Относительные ориентиры
+Первая мера для вычисления "похожести" задач вычисляла попарно разницу в производительности, так же называемую "relative landmarks" $RL_{a,b,j} = P_{a,j} - P_{b,j}$ между двумя конфигурациями $\theta_{a}$ и $\theta_{b}$ на конкретной задаче $t_{j}$.
+Линейный дискриминант
+Линейный дискриминант (англ. linear discriminant) $P(\theta_{Lin},t_{j})$ можно понимать как группировка и разделение категорий соответствующих конкретным признакам. Линейный дискриминант обычно ищет линейную комбинацию признаков, которая лучше всего разделит классы. Результат — линия, плоскость или гиперплоскость, зависит от числа комбинированных признаков.
+Наивный Байесовский лэндмарк
+Наивный Байесовский лэндмарк $P(\theta_{NB},t_{j})$ [28] — вероятностный классификатор, основанный на теореме Байеса. Называется наивным потому что предполагается, что все атрибуты независимы друг от друга.
+1NN
+Elite 1-nearest neighbor $P(\theta_{1NN},t_{j})$ [29] kNN c $k = 1$. Elite — вариация основного метода, но в этом случае на вход kNN подается предварительно отобранное множество самых информативных примеров (у них минимлаьная разница приращения информации (information gain).Помогает установить, является ли задача релевантной, если похожи их атрибуты.
+Примечания
+-  Wolpert and Macready, 1996
+-  Giraud-Carrier and Provost, 2005
+-  Datasets meta-feature description for recommending feature selection algorithm
+-  Ravie & Larochelle, Optimization as a model for a few-shot learning, 2017
+-  Nadaraya-Watson estimator
+-  V. A. Epanechnikov, Non-Parametric Estimation of a Multivariate Probability Density
+-  Donald Michie, David J. Spiegelhalter, Charles C. Taylor, and John Campbell. Machine Learning, Neural and Statistical Classification, 1994
+-  A. Kalousis. Algorithm Selection via Meta-Learning. PhD thesis, University of Geneva, Department of Computer Science, 2002
+-  Peter J. Rousseeuw and Mia Hubert. Robust statistics for outlier detection. Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2011.
+-  Alexandros Kalousis and Melanie Hilario. Model selection via meta-learning: a comparative study.Intl Journ. on Artificial Intelligence Tools, 2001.
+-  Mostafa A. Salama, Aboul~Ella Hassanien, and Kenneth Revett. Employment of neural network and rough set in meta-learning, 2013.
+-  Shawkat Ali and Kate~A. Smith-Miles. On learning algorithm selection for classification. Applied Soft Computing, 2006.
+-  C. Soares, P. Brazdil, and P. Kuba. A meta-learning method to select the kernel width in support vector regression, 2004.
+-  R `emi Bardenet, M `aty `as Brendel, Bal `azs K `egl, and Michele Sebag. Collaborative hyperparameter tuning. In Proceedings of ICML 2013, pages 199–207, 2013
+-  Ciro Castiello, Giovanna Castellano, and Anna~Maria Fanelli. Meta-data: {C}haracterization of input features for meta-learning, pages 457 -- 468, 2005.
+-  Feature importance A. Agresti. Categorical Data Analysis. Wiley Interscience, 2002.
+-  Tin Kam Ho and Mitra Basu. Complexity measures of supervised classification problems. Pattern Analysis and Machine Intellig, 2002.
+-  R. Vilalta. Understanding accuracy performance through concept characterization and algorithm analysis. ICML Workshop on Recent Advances in Meta-Learning and Future Work, 1999.
+-  C K\ddot{o}pf and I Iglezakis. Combination of task description strategies and case base properties for meta-learning, 2002.
+-  Y Peng, P Flach, C Soares, and P Brazdil. Improved dataset characterisation for meta-learning, 2002.
+-  Andray Filchenkov and Arseniy Pendryak. Dataset metafeature description for recommending feature selection. In \emph{ISMW FRUCT}, pages 11--18, 2015.
+-  Bernhard Pfahringer, Hilan Bensusan, and Christophe G. Giraud-Carrier. Meta-learning by landmarking various learning algorithms.In \emph{17th International Conference on Machine Learning (ICML), 2000.
+-  Bernhard Pfahringer, Hilan Bensusan, and Christophe G. Giraud-Carrier. Meta-learning by landmarking various learning algorithms.In \emph{17th International Conference on Machine Learning (ICML)}, pages 743 -- 750, 2000.
+-  Daren Ler, Irena Koprinska, and Sanjay Chawla. Utilizing regression-based landmarkers within a meta-learning framework for algorithm selection. \emph{Technical Report 569. University of Sydney}, pages 44--51, 2005.
+-  J F\ddot{u}rnkranz and J Petrak. An evaluation of landmarking variants. \emph{ECML/PKDD 2001 Workshop on Integrating Aspects of Data Mining, Decision Support and Meta-Learning}, pages 57--68, 2001.
+-  Taciana AF Gomes, Ricardo BC Prudencio, Carlos Soares, Andre LD Rossi and Andre Carvalho. Combining meta-learning and search techniques to select parameters for support vector machines, 2012.
+-  L Todorovski and S Dzeroski. Experiments in meta-level learning with ILP. Lecture Notes in Computer Science, 1704:98–106, 1999.
+-  Daren Ler, Irena Koprinska, and Sanjay Chawla. Utilizing regression-based landmarkers within a meta-learning framework for algorithm selection. \emph{Technical Report 569. University of Sydney}, pages 44--51, 2005.
+-  Bernhard Pfahringer, Hilan Bensusan, and Christophe G. Giraud-Carrier. Meta-learning by landmarking various learning algorithms.In \emph{17th International Conference on Machine Learning (ICML)}, pages 743 -- 750, 2000.
+См. Также
+Источники информации
+- https://lilianweng.github.io/lil-log/2018/11/30/meta-learning.html#define-the-meta-learning-problem
+- https://arxiv.org/pdf/1810.03548.pdf
+- https://www.ml4aad.org/wp-content/uploads/2018/09/chapter2-metalearning.pdf
+- https://openreview.net/pdf?id=rJY0-Kcll
+- https://www1.maths.leeds.ac.uk/~charles/statlog/whole.pdf
+- https://www.fruct.org/publications/ainl-fruct/files/Fil.pdf

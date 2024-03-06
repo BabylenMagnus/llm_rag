@@ -1,0 +1,103 @@
+Анализ видео
+Трекинг — определение местоположения объекта (нескольких объектов) во времени.
+Задача отслеживания объектов на видео является одной из самых интересных задач в информационных технологиях. На первый взгляд, видеопоток можно рассматривать как последовательность отдельных кадров, поэтому применимы многие алгоритмы, использующиеся для обработки обычных изображений. Сегодня к задаче распознавания объектов также широко применяются методы классификации, а именно, строятся системы, которые определяют к какому классу (изображение содержит объект или изображение не содержит объект) относится изображение.
+С другой стороны, видеопоток обладает свойством связности: каждый последующий кадр не сильно отличается от предыдущего, поэтому возможно применение алгоритмов, основанных на этом свойстве. Одной из интересных задач в этой области является трекинг перемещений объектов на видео. В работе [1] алгоритмы отслеживания разделены на четыре основные категории: отслеживание областей, отслеживание по активному контуру, отслеживание по характерным признакам, отслеживание по модели.
+Содержание
+- 1 Распознавание изображений
+- 2 Отслеживание объекта
+- 2.1 Visual object tracking
+- 2.2 Multiple object tracking
+- 2.3 Основные трудности
+- 3 См. также
+- 4 Примечания
+- 5 Источники информации
+Распознавание изображений
+Для детектирования объекта на изображении применяются алгоритмы распознавания. Алгоритм распознавания изображений принимает картинку в качестве входных данных и выводит, что содержится на данном изображении.
+Классификация изображений производится поэтапно. На первом шаге входное изображение зачастую предварительно обрабатывается для нормализации контраста и яркости, а также на этом шаге входное изображение обрезается и масштабируется до фиксированного размера.
+На втором шаге необходимо упростить изображение путем извлечения важной информации, так как исходное изображение содержит слишком много дополнительной информации, которая не требуется для классификации. Этот шаг называется извлечением признаков. Существует достаточно большое количество признаков, используемых в компьютерном зрении, — это признаки Хаара, HOG (Histogram of Oriented Gradients), SIFT (Scale-Invariant Feature Transform), SURF (Speeded Up Robust Feature) и другие.
+На третьем шаге алгоритм классификации принимает вектор признаков в качестве входных данных и выводит к какому классу принадлежит изображение.
+Метод Виолы-Джонса
+Основной принцип алгоритмы Виолы-Джонса, основанный на признаках Хаара, заключается в сканировании изображения с помощью сканирующего окна, которое позволяет обнаружить заданный объект. Однако признаки, предложенные Виолой и Джонсом, содержат более одной прямоугольной области и несколько сложнее. На иллюстрации показано четыре различных типа признаков. Величина каждого признака вычисляется как сумма пикселей в белых прямоугольниках, из которой вычитается сумма пикселей в чёрных областях. Прямоугольные признаки более примитивны, чем steerable filter, и, несмотря на то, что они чувствительны к вертикальным и горизонтальным особенностям изображений, результат их поиска более груб. Однако, при хранении изображения в интегральном формате проверка прямоугольного признака на конкретной позиции проводится за константное время, что является их преимуществом по сравнению с более точными вариантами. Каждая прямоугольная область в используемых признаках всегда смежна с другим прямоугольником, поэтому расчёт признака с двумя прямоугольниками состоит из шести обращений в интегральный массив, для признака с тремя прямоугольниками - из восьми, и с четырьмя прямоугольниками - из девяти.
+Отслеживание объекта
+Отслеживанием называется поиск объекта в последовательных кадрах видео. Отслеживание объекта в некоторых случаях может выполняться при помощи алгоритмов детектирования. При детектировании основная идея заключается в том, чтобы сначала определить регионы интереса (ключевые точки), которые будут независимы к преобразованиям. Затем для каждого региона интереса строится его векторное представление — дескриптор. Далее на каждом кадре будет выполняться поиск объекта и выделение его местоположения прямоугольником.
+При трекинге целью является нахождение объекта в текущем кадре, если он успешно отслеживался во всех предыдущих кадрах. Так как объект был отслежен до текущего кадра, известны параметры модели движения: скорость и направление движения объекта в предыдущих кадрах. Поэтому можно предсказать новое местоположение объекта, опираясь на его модель движения, и оно будет очень близко к реальному новому положению объекта.
+Visual object tracking
+VOT (Visual object tracking)
+- Рассматривается отслеживание одного объекта
+- Объект уже выделен на первом кадре
+- "Model-free" — нет ничего, кроме одного изображения на первом кадре, т.е. не можем детектировать объект
+- "Short-term" — отслеживаем на коротких промежутках времени, не применяем повторное обнаружение
+- Не используются будущие кадры, только предыдущие
+Пример алгоритма
+- Инициализация
+- Находим 100 контрольных точек с помощью метода поиска локальных особенностей (Harris corners) в рамке руки
+- Вычисляем медиану
+- Вычисляем цветовую статистику в окрестности центра
+- Разметить в рамке руки все пиксели, похожие на кожу
+- Слежение
+- Отслеживаем контрольные точки
+- Если точка нарушает условия стаи, то удаляем её
+- Инициализация новых контрольных точек
+- Ищем особенности (Harris corners)
+- Если точка не на коже, то удаляем её
+Input : Pretrained CNN filters {,..., } Initial target state Output: Estimated target states 1: Randomly initialize the last layer . 2: Train a bounding box regression model. 3: Draw positive samples and negative samples . 4: Update { } using and ; 5: {1} and {1}. 6: repeat 7: Draw target candidate samples ; 8: Find the optimal target state by Eq. (1). 9: if > 0.5 then 10: Draw training samples and . 11: { }, { }. 12: if | | > then \ { }. 13: if | | > then \ { }. 14: Adjust using bounding box regression. 15: if < 0.5 then 16: Update { } using and . 17: else if mod 10 = 0 then 18: Update { } using and . 19: until end of sequence
+(1):.
+Multiple object tracking
+MOT (Multiple object tracking)
+- Задача "выделения и сопровождения множества объектов"
+- Нужно найти все объекты на кадрах
+- Определить сколько у нас разных "экземпляров" объектов
+- Найти на каких кадрах виден каждый экземпляр и где он именно
+- Обобщение задачи "выделение объектов на изображении" на случайном видео
+- В отличие от VOT:
+- Работает со множеством объектов
+- На длительных промежутках времени
+- Есть модель объектов (возможность повторного обнаружения)
+- Разрешено "заглядывать в будущее"
+Пример алгоритма
+- Поиск голов на ключевых кадрах
+- Построение треклетов
+- Визуальное сопровождение
+- Получаем гипотезы движения объектов между ключевыми кадрами (треклеты)
+- Объединение треклетов в траектории
+- Алгоритм MCMC DA
+- Построение выборки из распределения
+- Алгоритм Метрополиса — Гастингса
+- Элемент с максимальной вероятностью
+- Восстановление положения на промежуточных кадрах
+- Алгоритм MCMC DA
+Multiple Object Tracking Tutorial
+function MultipleObjectTrackingExample() // Create objects used for reading video and displaying the results. videoObjects = setupVideoObjects('atrium.mp4'); // Create objects used for detecting objects in the foreground of the video. minBlobArea = 400; % Minimum blob size, in pixels, to be considered as a detection detectorObjects = setupDetectorObjects(minBlobArea);
+Create the Multi-Object Tracker
+tracker = multiObjectTracker(... 'FilterInitializationFcn', @initDemoFilter, ... 'AssignmentThreshold', 30, ... 'DeletionThreshold', 22, ... 'ConfirmationThreshold', [6 10] ... );
+Define a Kalman Filter
+function filter = initDemoFilter(detection) // Initialize a Kalman filter for this example. // Define the initial state. state = [detection.Measurement(1); 0; detection.Measurement(2); 0]; // Define the initial state covariance. stateCov = diag([50, 50, 50, 50]); // Create the tracking filter. filter = trackingKF('MotionModel', '2D Constant Velocity', ... 'State', state, ... 'StateCovariance', stateCov, ... 'MeasurementNoise', detection.MeasurementNoise(1:2,1:2) ... ); end // Count frames to create a sense of time. frameCount = 0; while hasFrame(videoObjects.reader) // Read a video frame and detect objects in it. frameCount = frameCount + 1; // Promote frame count frame = readFrame(videoObjects.reader); // Read frame [detections, mask] = detectObjects(detectorObjects, frame); // Detect objects in video frame // Run the tracker on the preprocessed detections. confirmedTracks = updateTracks(tracker, detections, frameCount); // Display the tracking results on the video. displayTrackingResults(videoObjects, confirmedTracks, frame, mask); end
+Create Video Objects
+function videoObjects = setupVideoObjects(filename) // Initialize video I/O // Create objects for reading a video from a file, drawing the tracked // objects in each frame, and playing the video. // Create a video file reader. videoObjects.reader = VideoReader(filename); // Create two video players: one to display the video, // and one to display the foreground mask. videoObjects.maskPlayer = vision.VideoPlayer('Position', [20, 400, 700, 400]); videoObjects.videoPlayer = vision.VideoPlayer('Position', [740, 400, 700, 400]); end
+Create Detector Objects
+function detectorObjects = setupDetectorObjects(minBlobArea) // Create System objects for foreground detection and blob analysis // The foreground detector segments moving objects from the // background. It outputs a binary mask, where the pixel value of 1 // corresponds to the foreground and the value of 0 corresponds to // the background. detectorObjects.detector = vision.ForegroundDetector('NumGaussians', 3, ... 'NumTrainingFrames', 40, 'MinimumBackgroundRatio', 0.7); // Connected groups of foreground pixels are likely to correspond to // moving objects. The blob analysis System object finds such // groups (called 'blobs' or 'connected components') and computes // their characteristics, such as their areas, centroids, and the // bounding boxes. detectorObjects.blobAnalyzer = vision.BlobAnalysis('BoundingBoxOutputPort', true, ... 'AreaOutputPort', true, 'CentroidOutputPort', true, ... 'MinimumBlobArea', minBlobArea); end
+Detect Objects
+function [detections, mask] = detectObjects(detectorObjects, frame) // Expected uncertainty (noise) for the blob centroid. measurementNoise = 100*eye(2); // Detect foreground. mask = detectorObjects.detector.step(frame); // Apply morphological operations to remove noise and fill in holes. mask = imopen(mask, strel('rectangle', [6, 6])); mask = imclose(mask, strel('rectangle', [50, 50])); mask = imfill(mask, 'holes'); // Perform blob analysis to find connected components. [~, centroids, bboxes] = detectorObjects.blobAnalyzer.step(mask); // Formulate the detections as a list of objectDetection objects. numDetections = size(centroids, 1); detections = cell(numDetections, 1); for i = 1:numDetections detections{i} = objectDetection(frameCount, centroids(i,:), ... 'MeasurementNoise', measurementNoise, ... 'ObjectAttributes', {bboxes(i,:)}); end end
+Display Tracking Results
+function displayTrackingResults(videoObjects, confirmedTracks, frame, mask) % Convert the frame and the mask to uint8 RGB. frame = im2uint8(frame); mask = uint8(repmat(mask, [1, 1, 3])) .* 255; if ~isempty(confirmedTracks) // Display the objects. If an object has not been detected // in this frame, display its predicted bounding box. numRelTr = numel(confirmedTracks); boxes = zeros(numRelTr, 4); ids = zeros(numRelTr, 1, 'int32'); predictedTrackInds = zeros(numRelTr, 1); for tr = 1:numRelTr // Get bounding boxes. boxes(tr, :) = confirmedTracks(tr).ObjectAttributes{1}{1}; // Get IDs. ids(tr) = confirmedTracks(tr).TrackID; if confirmedTracks(tr).IsCoasted predictedTrackInds(tr) = tr; end end predictedTrackInds = predictedTrackInds(predictedTrackInds > 0); // Create labels for objects that display the predicted rather // than the actual location. labels = cellstr(int2str(ids)); isPredicted = cell(size(labels)); isPredicted(predictedTrackInds) = {' predicted'}; labels = strcat(labels, isPredicted); // Draw the objects on the frame. frame = insertObjectAnnotation(frame, 'rectangle', boxes, labels); // Draw the objects on the mask. mask = insertObjectAnnotation(mask, 'rectangle', boxes, labels); end // Display the mask and the frame. videoObjects.maskPlayer.step(mask); videoObjects.videoPlayer.step(frame); end end
+Основные трудности
+- Вычислительная нагрузка
+- Нужно обрабатывать кадров в секунду
+- Изменение по времени
+- Вид объекта меняется от кадра к кадру из-за ракурса, изменения освещения, внутренний изменений
+- Взаимодействие объектов
+- Перекрытие объектов
+- Визуальное сходство объектов
+- Для оценки качества работы алгоритмов слежения и настройки параметров требуются размеченные эталонные данные
+- Подготовить эталонные данные для видео существенно сложнее, чем для изображения
+- Один эталонный пример для выделения объектов — одно изображение
+- Один эталонный пример для отслеживания объектов — одно видео
+- Сейчас есть хорошие конкурсы, но объём данных по прежнему ограничен, особенно для MOT
+См. также
+Примечания
+Источники информации
+1. Hu W. M., Tan T. N., Wang L., Maybank S. A survey of visual surveillance of object motion and behaviors // IEEE Transactions on System, Man, and Cybernetics (T-SMC), Part C. – 2004. Vol. 34(3). – P. 334-352.
+2. Лавелина Е.С., Закуанова М.Р., Масловская М.А. ОТСЛЕЖИВАНИЕ ОБЪЕКТОВ В ВИДЕОПОТОКЕ // Научное сообщество студентов XXI столетия. ТЕХНИЧЕСКИЕ НАУКИ: сб. ст. по мат. LIV междунар. студ. науч.-практ. конф. № 6(53). URL: https://sibac.info/archive/technic/6(53).pdf (дата обращения: 20.04.2020)
+3. Анализ изображений и видео. Часть 2
+4. Learning Multi-Domain Convolutional Neural Networks for Visual Tracking
+5. Multiple object tracking tutorial

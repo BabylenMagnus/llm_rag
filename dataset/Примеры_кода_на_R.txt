@@ -1,0 +1,155 @@
+Примеры кода на R
+Содержание
+- 1 Особенности написания кода на R
+- 2 Описание известных пакетов
+- 3 Примеры алгоритмов
+- 3.1 Задачи регрессии
+- 3.2 Метод главных компонент
+- 3.3 Деревья решений, случайный лес
+- 3.4 Наивный Бейесовский классификатор
+- 3.5 Метод опорных векторов
+- 3.6 Бустинг
+- 3.7 Кластеризация
+- 4 См. также
+- 5 Примечания
+Особенности написания кода на R
+Язык R изначально создавался как язык программирования для работы с графикой и статистической обработки данных. Поэтому он отличается большим количеством реализованных статистических алгоритмов, на основе которых можно создавать модели и алгоритмы машинного обучения.
+Язык постоянно расширяется за счёт новых библиотек (пакетов). Для импорта одного пакета необходимо прописать в файле следующие строки:
+install.packages("packageName") require("packageName")
+Для того чтобы импортировать пакет с его зависимостями в код следует включить следующие строки:
+library("packageName")
+Описание известных пакетов
+Для языка
+R написано много пакетов, каждый из которых предназначен для решения определенного круга проблем. Например, для обработки данных или реализации основных алгоритмов. В статье представлено несколько наиболее часто используемых пакетов.
+Пакеты для обработки данных
+Pipelearner
+Пакет
+Pipelearner[1] предоставляет базовые возможности для разбиения набора данных на блоки для обучения моделей. В основе пакета лежит концепция работы конвейера.
+Принцип работы очень прост и описывается 3 шагами:
+- Инициализация
+- Функция
+pipelearner()инициализирует новый объект, который используется в следующих функциях обработки. На этом этапе необходимо указать датасет, с которым производится работа. Также можно указать набор обучающих моделей и предсказываемую модель данных.
+- Функция
+- Настройка
+- Для настройки есть 3 основных функции:
+-
+learn_cvpairs()отвечает за кросс-валидацию. Функция генерирует набор пар из тестовой и обучающей выборки на основе входного датасета.
+- В качестве ядра разделения можно использовать
+crossv_mc(случайные разбиения),
+crossv_kfold(k-fold кросс-валидация) или
+crossv_loo(leave-one-out разбиения) из пакета
+modelr[2]. Но если данных способов недостаточно, можно написать свою функцию разбиения.
+-
+learn_curves()служит для настройки кривых обучения. Используется метод увеличивающихся пропорций относительно начала датасета.
+- Например, вызов
+learn_curves(.5, .75, 1)создаст сценария работы: в первом будет взята первая половина выбоки, во втором — первые объектов, и в третьем — вся выборка. Авторы пакета утверждают, что брать случайные объекты выборки не имеет смысла, потому что выборка уже случайно разбита с помощью
+learn_cvpairs().
+-
+learn_models()предназначен для добавления новых обучающих моделей.
+- Обучение
+- С помощью функции
+learn()все сконструированные ранее модели обучаются и выдается таблица результатов работы
+- С помощью функции
+В итоге работа с пакетом выглядит приблизительно следующим образом:
+# Load the dependencies library(pipelearner) library(dplyr) iris %>% # Use iris dataset pipelearner() %>% # Initialize a blank pipelearner object learn_cvpairs(crossv_mc, n = 50) %>% # Creating 50 random cross-validation pairs learn_curves(seq(.5, 1, by = .1)) %>% # Copy each cv-pair to be fitted in sample size proportions of .5 to 1 in increments of .1. learn_models(lm, Sepal.Width ~ .*.) %>% # Use regression modell learn_models(rpart::rpart, Sepal.Width ~ .) %>% # Use decision tree modell learn() # Fit all models on all partitions and return the results
+Пакет хорошо документирован, все непонятные моменты можно прояснить, просто изучив структуру объекта на каждом этапе работы алгоритма.
+MICE
+Пакет
+MICE[3] используется для заполнения пропущенных значений в данных. При этом нет необходимости думать о типах значений: для каждого из них в пакете предусмотрено заполнение по умолчанию.
+Принцип работы основан на методе множественного восстановления[4]. Пропущенные данные заполняются не один, а несколько раз. После этого, каждый из полученных наборов обучается на определенной модели. Затем, результаты агрегируются и выдаются итоговые параметры модели.
+Стандартный процесс работы выглядит так:
+# Load the dependencies library(mice) # Impute the missing data m times imp <- mice(nhanes, m = 5) # Analize completed datasets using linear model fit <- with(imp, lm(chl ~ bmi + age)) # Combine parameter estimates est <- pool(fit) # Print summary of estimation summary(est)
+Ggplot2
+Данный пакет[5] используется для отрисовки данных и графиков.
+Пакеты с реализованными алгоритмами машинного обучения
+Caret
+В данном пакете [6] представлены модели для регрессии и классификации, а также большая часть популярных метрик. В настоящее время имеется возможность использовать более 180 различных алгоритмов.
+Основная функция в составе
+Caret — функция
+train(). Параметры обучения в ней задаются аргументом
+trControl, а оценка качества модели — аргументом
+metric.
+Отличительными особенностями
+Caret является универсальность используемых команд, наличие автоматического подбора гиперпараметров для алгоритмов, в также наличие параллельных вычислений.
+Party
+Пакет
+Party [7] содержит в себе инструменты для рекурсивного разбиения данных на классы. В пакета также доступна расширяемая функциональность для визуализации древовидных регрессионных моделей.
+Основная функция пакета —
+ctree(), которая используется для создания деревьев решения для таких задач регрессии как номинальные, порядковые, числовые а также многовариантные переменные отклика. На основе деревьев условного вывода
+cforest() предоставляет реализацию случайных лесов Бреймана. Функция
+mob() реализует алгоритм рекурсивного разделения на основе параметрических моделей (например, линейных моделей, GLM или регрессии выживания), использующих тесты нестабильности параметров для выбора разделения.
+RandomForest
+RandomForest [8] — пакет с реализацией алгоритма случайного леса. Используется для решения задач регрессии и классификации, а также для поиска аномалий и отбора предикторов.
+ClusterR
+Пакет
+ClusterR [9] состоит из алгоритмов кластеризации на основе центроидов (метод K-средних (k-means), mini-batch-kmeans, k-medoids) и распределений (GMM). Кроме того, пакет предлагает функции для:
+- проверки результатов,
+- построения графика результатов, используя метрики
+- прогнозирования новых наблюдения,
+- оценки оптимального количества кластеров для каждого алгоритма
+E1071
+Пакет [10] содержит в себя функции для анализа классов, кратковременного преобразование Фурье, нечеткой кластеризации, реализации метода опорных векторов, вычисления кратчайшего пути, а также реализации наивного байесовского классификатора.
+Mlr
+В пакете
+Mlr [11] представлены модели для регрессии, классификации, кластеризации и анализа выживаемости, а также широкие возможности для оценки качества (в том числе функции для анализа ROC-кривых).
+Есть поддержка параллельных вычислений и конвейерных операций.
+H2O
+В пакете
+H20 [12] представлены линейные модели, такие как градиентный бустинг, метод главных компонент (PCA), GLRM, метод k ближайших соседей, случайный лес, наивный байесовский классификатор. Сильная сторона этой библиотеки — работа с большими объемами данных и поддержка многопоточных вычислений. Однако в ней нет возможности задавать параметры используемых алгоритмов
+Примеры алгоритмов
+В интернете много хороших примеров реализации алгоритмов на
+R, но среди них хотелось бы особо отметить один учебник[13] c портала coderlessons.com. В нем представлена реализация основных алгоритмов в порядке, удобном для изучения.
+Задачи регрессии
+Линейная регрессия
+# reading data data <- read.csv("input.csv", sep = ',', header = FALSE) # evaluating linear regression model model <- lm(data$x ~ data$y) # getting summary print(summary(model)) # visualizing data plot(data$y, data$x) lines(data$y, predict(fit), col = 'red')
+Множественная регрессия
+# reading data rdata <- read.csv("input.csv", sep = ',', header = FALSE) # evaluating regression model model <- lm(target ~ x + y + z, data = rdata) # getting summary print(summary(model))
+Логистическая регрессия
+Логистическая регрессия – это модель регрессии, в которой переменная ответа принимает значения 0 или 1 (True или False). Реализация на языке
+R представлена в следующем фрагменте:
+# reading data rdata <- read.csv("input.csv", sep = ',', header = FALSE) # evaluating model model = glm(formula = target ~ x + y + z, data = rdata, family = binomial) # printing summary print(summary(model))
+Метод главных компонент
+# importing library and its' dependencies library(h2o) h2o.init() path <- system.file("extdata", "data.csv", package = "h2o") data <- h2o.uploadFile(path = data) # evaluating h2o.prcomp(training_frame = data, k = 8, transform = "STANDARDIZE")
+Деревья решений, случайный лес
+Деревья решений
+Для создания деревьев решений в
+R используется функция
+ctree() из пакета
+party.
+# importing package install.packages("party") # reading data rdata <- read.csv("input.csv", sep = ',', header = FALSE) # evaluating model output.tree <- ctree(target ~ x + y + z, data = rdata) # plotting results plot(output.tree)
+Случайный лес
+Для создания случайного леса необходимо импортировать пакет
+randomForest
+# importing packages install.packages("party") install.packages("randomForest") # reading data rdata <- read.csv("input.csv", sep = ',', header = FALSE) # creating the forest output.forest <- randomForest(target ~ x + y + z, data = rdata) # getting results print(output.forest)
+Наивный Бейесовский классификатор
+# importing package and it's dependencies library(e1071) # reading data data <- read.csv("input.csv", sep = ',', header = FALSE) # splitting data into training and test data sets index <- createDataPartition(y = data$target, p = 0.8, list = FALSE) training <- data[index,] testing <- data[-index,] # create objects x and y for predictor and response variables x <- training[, -9] y <- training$target # training model model <- train(x, y, 'nb', trControl = trainControl(method = 'cv', number = 10)) # predicting results predictions <- predict(model, newdata = testing)
+Метод опорных векторов
+# importing package and its' dependencies library(caret) #reading data data <- read.csv("input.csv", sep = ',', header = FALSE) # splitting data into train and test sets index <- createDataPartition(y = data$target, p = 0.8, list = FALSE) training <- data[index,] testing <- data[-index,] # evaluating model fit <- train(target ~ x + y + z, data = train_flats, method = "svmRadial", trControl = trainControl(method = "repeatedcv", number = 10, repeats = 3)) # printing parameters print(fit)
+Бустинг
+# loading libraries install.packages("mlr") library(mlr) # loading data train <- read.csv("input.csv") test <- read.csv("testInput.csv") # loading GBM getParamSet("classif.gbm") baseLearner <- makeLearner("classif.gbm", predict.type = "response") # specifying parameters controlFunction <- makeTuneControlRandom(maxit = 50000) # specifying tuning method cvFunction <- makeResampleDesc("CV", iters = 100000) # definig cross-validation function gbmParameters<- makeParamSet( makeDiscreteParam("distribution", values = "bernoulli"), makeIntegerParam("n.trees", lower = 100, upper = 1000), # number of trees makeIntegerParam("interaction.depth", lower = 2, upper = 10), # depth of tree makeIntegerParam("n.minobsinnode", lower = 10, upper = 80), makeNumericParam("shrinkage", lower = 0.01, upper = 1) ) # tunning parameters gbmTuningParameters <- tuneParams(learner = baseLearner, task = trainTask, resampling = cvFunction, measures = acc, par.set = gbmParameters, control = controlFunction) # creating model parameters model <- setHyperPars(learner = baseLearner, par.vals = gbmTuningParameters) # evaluating model fit <- train(model, train) predictions <- predict(fit, test)
+Кластеризация
+Для реализации алгоритма кластеризации k-средних используется пакет
+ClusterR. В нем реализовано 2 функции:
+KMeans_arma() и
+KMeans_rcpp(). В примере далее рассмотрена реализация с использованием функции
+KMeans_arma().
+# importing package and its' dependencies library(ClusterR) # reading data data <- read.csv("data.csv") # evaluating model model <- KMeans_arma(data, clusters = 2, n_iter = 10, seed_mode = "random_subset", verbose = T, CENTROIDS = NULL) # predicting results predictions <- predict_KMeans(test_data, model)
+См. также
+- Примеры кода на Scala
+- Примеры кода на Java
+- Примеры кода на Kotlin
+- Обзор библиотек для машинного обучения на Python
+Примечания
+-  Pipelearner github repository
+-  Modelr github repository
+-  MICE package documentation
+-  Multiple Imputation
+-  Ggplot2 main info page
+-  Caret guide book
+-  party package main info page
+-  RandomForest package main info
+-  ClusterR documentation
+-  1071 package documentation
+-  Mlr package documentation
+-  H20 main info page
+-  Учебник по R

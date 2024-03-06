@@ -1,0 +1,82 @@
+Примеры кода на Kotlin в Jupyter Notebook
+Содержание
+Kotlin и Data Science
+Kotlin - это прагматичный, статически типизированный JVM язык, который поддерживает написание кода как в ООП, так и в функциональном стилях, а также компилируется в различные платформы: JVM, JS, Native. Благодаря статической типизации, Котлин более производителен в больших проектах, по сравнению с Python, а также позволяет избежать Runtime errors. Сравним аналогичные примеры кода на Python и Kotlin:
+Python:
+import numpy as np # ... a = np.ones((3, 3), dtype=int) * 3 b = np.random.random((3, 3)) b *= a # Success a *= b # TypeError at runtime
+Kotlin:
+// ... val a = ones<Int>(3, 3) * 3 val b = Random.random(3, 3) b *= a // Success a *= b // Compilation error: //Type mismatch: inferred type is KtNDArray<Double> but KtNDArray<Int> was expected
+Также Котлин имеет имеет такую особенность дизайна языка, как null-safety и предоставляет такие операторы, как: safe call operator, elvis operator, not-null assertion operator, что позволяет ему быть более типобезопасным, по сравнениюc с Python:
+var a: String = "abc" a = null // compilation error var b: String? = "abc" b = null // ok
+Помимо функционального синтаксиса и конструкций, Котлин также предоставляет набор математических и machine learning библиотек, а также инструментов для Data Science, в том числе, интегрированность с Jupyter Notebook.
+Установка Kotlin в Jupyter Notebook
+Kernel в Jupyter Notebook - это вычислительный движок, который исполняет код в данном документе и запускается автоматически при запуске ассоциированного с ним Jupyter Notebook документа. Они существуют для разных языков, например, ipython kernel исполняет Pythod код, а Kotlin kernel - Kotlin код в Jupyter Notebook. Именно Kotlin kernel позволяет писать и запускать код в Jupyter Notebook, а также использовать библиотеки и фреймворки, написанные на Java и Kotlin.
+На данный момент, установить Kotlin kernel можно только через conda:
+conda install kotlin-jupyter-kernel -c jetbrains
+Обратите внимание, что Kotlin Jupyter требует установленной Java 8:
+apt-get install openjdk-8-jre
+Поддерживаемые библиотеки
+- kotlin-statistics - предоставляет расширения для функций для подсчета статистики. Поддерживает основные list/sequence/array functions, slicing operators (countBy, simpleRegressionBy, etc), binning operations, discrete PDF sampling, naive bayes classifier, clustering, linear regression, и другое
+- kmath - поддерживает алгебраические структуры и операторы, математические выражения, гистограммы, потоковые операции, обертки над commons-math и koma, и другое. Вдохновлена numpy
+- Krangl - предоставляет функционал для обработки данных в функциональном стиле(filter, transform, aggregate, reshape и др.) Вдохновлена pandas
+- lets-plot - Мультиплатформенная библиотека для создания графиков из данных. Может использоваться не только в JVM, но также JS and Python.
+- kravis - библиотека для визуализации данных.
+- klaxon $-$ Котлин JSON парсер
+- spark $-$ Фреймворк для распределённой обработки неструктурированных и слабоструктурированных данных
+- gral $-$ Java библиотека для отображения графиков
+- koma $-$ Котлин библиотека для научных вычислений
+- numpy $-$ Kотлин обертка над Python NumPy
+- exposed $-$ Kотлин SQL фреймворк
+- mysql $-$ MySql JDBC
+Добавление зависимостей
+По умолчанию возможно добавлять зависимости из следующих репозиториев:
+Способы подключения зависимости:
+@file:Repository("https://jcenter.bintray.com") @file:DependsOn("com.beust:klaxon:5.0.1") import com.beust.klaxon.*
+Или коротким способом:
+%use klaxon
+Также можно указать конкретную версию зависимости:
+%use krangl(0.10)
+Можно указать свойства library descriptor (обязательно использовать именованные аргументы):
+%use spark(scala=2.11.10, spark=2.4.2)
+Подключить несколько библиотек одним выражением:
+%use lets-plot, krangl, mysql(8.0.15)
+Работа с JSON
+Пример парсинга датасета в формате JSON с Котлин библиотекой Klaxon:
+%use klaxon import java.io.*
+data class User( val age: Int, val firstName: String ="", val lastName: String ="", val eyeColor: String )
+val users = Klaxon().parseArray<User>(File("users.json").readText())!! users.count()
+Функциональный стиль с библиотекой krangl
+Примеры обработки данных в функциональном стиле с Kotlin stdlib:
+users.filter{it.eyeColor == "green"}
+users.groupBy { user -> user.eyeColor } .mapValues { mapEntry -> mapEntry.value.map { user -> user.firstName} }
+Примеры обработки данных в функциональном стиле с krangl
+Используемые функции:
+- addColumn $-$ добавление новой вычисленной по заданной функции колонки
+- filter $-$ подвыборка строк по заданному условию:
+df.filter { it["age"] eq 23 } df.filter { it["weight"] gt 50 } df.filter({ it["last_name"].isMatching { startsWith("Do") }})
+- sortedBy $-$ сортировка, можно передавать множество значений, которые будут учитываться в сортировке в соответствующем порядке
+df.sortedBy("age", "weight") df.sortedByDescending("age")
+- select и remove $-$ подвыборка строк
+df.select2 { it is IntCol } // functional style column selection df.select("last_name", "weight") // positive selection df.remove("weight", "age") // negative selection df.select({ endsWith("name") }) // selector mini-language
+Обработка строк:
+fun readFromJsonString(s: String) = s.removePrefix("JsonArray(value=[") .removeSuffix("])") .split(',') .dropLastWhile{it.isEmpty()} .toList()
+val channels = DataFrame .fromJson("channels.json") .addColumn("groups") { it["groups"].map<String>{value -> readFromJsonString(value)}}
+val modifiedChannels = channels .addColumn("count"){it["groups"].map<List<*>>{it.count()}} .filter{it["score"] gt 50} .filter{it["age (y)"] lt 40} .select("name", "score", "count", "groups") .sortedByDescending("score")
+Больше примеров с ипользованием библиотеки krangl - https://github.com/Kotlin/kotlin-jupyter/blob/master/samples/Krangl.ipynb
+Построение графиков
+Lets-plot
+Подробнее о настройках и параметрах графиков в Lets-plot: https://github.com/JetBrains/lets-plot-kotlin/blob/master/docs/guide/user_guide.ipynb
+lets_plot(eyes) + stat_count() + ggsize(500,300)
+val rand = java.util.Random()
+val data = mapOf<String, Any>( "rating" to List(200) { rand.nextGaussian() } + List(200) { rand.nextGaussian() * 1.5 + 1.5 }, "cond" to List(200) { "A" } + List(200) { "B" } ) var p = lets_plot(data) p += geom_density(color="dark_green", alpha=.3) {x="rating"; fill="cond"} p + ggsize(500, 250)
+lets_plot(mapOf( "date" to usages.select("DateTime").collectAsList().map{(it[0] as Timestamp).getTime()}, "usage" to usages.select("users").collectAsList().map{it[0]} )) + geom_bar(stat = Stat.identity){x = "date"; y = "usage"; fill ="usage"} + scale_x_datetime() + scale_fill_hue()+ qqsize(800, 400)
+Библиотека Kravis
+Подробнее - https://github.com/holgerbrandl/kravis
+%use kravis, krangl val sleepData = DataFrame.fromJson("data.json"). .addColumn("rem_proportion") { it["sleep_rem"] / it["sleep_total"] } .plot(x = "sleep_total", y = "rem_proportion", color = "vore", size = "brainwt") .geomPoint(alpha = 0.7) .guides(size = LegendType.none) .title("Correlation between dream and total sleep time")
+Библиотека Gral
+Источники
+- Kotlinlang — Официальный сайт языка Kotlin
+- Kotlin For Python Developers Documentation — Документация языка Kotlin для разработчиков на Python
+- kotlin-jupyter on GitHub
+- Примеры kotlin-jupyter
+- KotlinConf 2019: Using Kotlin for Data Science

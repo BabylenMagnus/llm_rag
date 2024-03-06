@@ -1,0 +1,89 @@
+Метрический классификатор и метод ближайших соседей
+Метрический классификатор (англ. similarity-based classifier) — алгоритм классификации, основанный на вычислении оценок сходства между объектами.
+Для формализации понятия сходства вводится функция расстояния между объектами. Как правило, не требуется, чтобы были выполнены все три аксиомы метрики — неравенство треугольника может нарушаться.
+Метод ближайших соседей — простейший метрический классификатор, основанный на оценивании сходства объектов. Классифицируемый объект относится к тому классу, которому принадлежат ближайшие к нему объекты обучающей выборки.
+Методближайших соседей (англ. kNN — Nearest Neighbours) — Для повышения надёжности классификации объект относится к тому классу, которому принадлежит большинство из его соседей — ближайших к нему объектов обучающей выборки . В задачах с двумя классами число соседей берут нечётным, чтобы не возникало ситуаций неоднозначности, когда одинаковое число соседей принадлежат разным классам.
+Метод взвешенных ближайших соседей — в задачах с числом классов 3 и более нечётность уже не помогает и ситуации неоднозначности всё равно могут возникать. Тогда-му соседу приписывается вес , как правило, убывающий с ростом ранга соседа . Объект относится к тому классу, который набирает больший суммарный вес среди ближайших соседей.
+Содержание
+- 1 Описание алгоритма
+- 2 Использование ядер сглаживания
+- 3 Использование различных метрик расстояния
+- 4 Пример использования (через scikit-learn)
+- 5 Пример на языке Scala
+- 6 Пример на языке Java
+- 7 См. также
+- 8 Примечания
+- 9 Источники информации
+Описание алгоритма
+Пусть задана обучающая выборка пар "объект-ответ"
+Пусть на множестве объектов задана функция расстояния. Эта функция должна быть достаточно адекватной моделью сходства объектов. Чем больше значение этой функции, тем менее схожими являются два объекта .
+Для произвольного объектарасположим объекты обучающей выборки в порядке возрастания расстояний до :
+, где через обозначается тот объект обучающей выборки, который является -м соседом объекта . Аналогичное обозначение введём и для ответа на -м соседе: . Таким образом, произвольный объект порождает свою перенумерацию выборки. В наиболее общем виде алгоритм ближайших соседей есть: ,
+где— заданная весовая функция, которая оценивает степень важности -го соседа для классификации объекта . Естественно полагать, что эта функция не отрицательна и не возрастает по (поскольку чем дальше объект, тем меньший вклад он должен вносить в пользу своего класса).
+По-разному задавая весовую функцию, можно получать различные варианты метода ближайших соседей.
+— простейший метод ближайшего соседа;
+— метод ближайших соседей;
+— метод экспоненциально взвешенных ближайших соседей, где предполагается константа ;
+Использование ядер сглаживания
+При использовании линейной функции в качестве Ядра[на 28.01.18 не создан].возможно совпадение суммарного веса для нескольких классов. Это приводит к неоднозначности ответа при классификации. Чтобы такого не происходило, используют функцию
+Будем обозначать функцию ядра.
+Примеры ядер
+Triangular:,
+Parabolic:,
+Tricube:.
+Метод парзеновского окна
+Алгоритмближайших соседей можно обобщить с помощью функции ядра. Рассмотрим два способа, которыми это можно сделать.
+— метод парзеновского окна фиксированной ширины ;
+— метод парзеновского окна переменной ширины;
+Сравним два этих метода. Сперва запишем классификаторы, полученные при использовании этих методов, в явном виде:
+Фиксированной ширины:,
+Переменной ширины:.
+не будет учитывать соседей на расстояние больше чем , а всех остальных учтет в соответствии с функций ядра . является аналогом метода ближайших соседей (т.к. для всех -ых соседей функция вернет 0), но при этом чем ближе -ый сосед, тем больший вклад в сторону своего класса он даст.
+Часто используют окно переменной ширины т.е. классификатор, по следующим причинам:
+- Удобнее оптимизировать целочисленный параметр , чем вещественный параметр по некоторой сетке;
+- Существует большое количество задач, где точки разбросаны неравномерно. В них могут существовать области, где достаточно брать небольшую и области, где в окно ширины попадает только одна точка. Тогда для классификатора будут существовать области в которых не будет ни одного объекта (кроме того, который нужно классифицировать). Для таких областей не понятно как классифицировать объекты.
+Использование различных метрик расстояния
+Очень редко известна хорошая функция расстояния. В качестве нее обычно использую следующие функции:
+Примеры метрик
+Пусть, — объекты, а , их признаковые описания.
+Евклидова метрика:,
+Расстояние Чебышёва:,
+Манхэттенское Расстояние:.
+При их использовании важно нормировать значения признаков, иначе один признак с максимальным значением может стать преобладающим, а признаки с маленькими значениями не будут учитываться при классификации. Чтобы отсеять лишние признаки (т.е. не влияющие на класс объекта) можно использовать feature selection.
+Пример использования (через scikit-learn)
+Рассмотрим использование алгоритма реального набора данных. Предположим, что мы загрузили и сохранили как с заголовком — описанием признаков.на примере
+- Загружаем данные
+import pandas as pd from sklearn.preprocessing import StandardScaler
+def load_data(data_path): ds = pd.read_csv(data_path, names=["id", "diagnosis", "radius_mean", "texture_mean", "perimeter_mean", "area_mean", "smoothness_mean", "compactness_mean", "concavity_mean", "concave points_mean", "symmetry_mean", "fractal_dimension_mean", "radius_se", "texture_se", "perimeter_se", "area_se", "smoothness_se", "compactness_se", "concavity_se", "concave points_se", "symmetry_se", "fractal_dimension_se", "radius_worst", "texture_worst", "perimeter_worst", "area_worst", "smoothness_worst", "compactness_worst", "concavity_worst", "concave points_worst", "symmetry_worst", "fractal_dimension_worst"]) y = ds['diagnosis'] X = ds.drop('diagnosis', axis=1) X = X.drop('id', axis=1) i = len(X.columns) X = X.drop(X.columns[i - 1], axis=1) y.replace(('M', 'B'), (1, 0), inplace=True) sc = StandardScaler() sc.fit(X) X_ans = sc.transform(X) return X_ans, y
+X, y = load_data("tr.csv")
+Теперь , — нормированные значения признаков и соответствующие им классы.
+- Делим данные на тренировочное и тестовое множество:
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=1234)
+- Создаем классификатор:
+from sklearn.neighbors import KNeighborsClassifier
+best_model = KNeighborsClassifier( n_neighbors=10, weights=’distance’, algorithm=’auto’, leaf_size=30, metric=’euclidean’, metric_params=None, n_jobs=4 )
+- Обучаемся:
+best_model.fit(X_train, y_train)
+- Используем скользящий контроль для поиска лучших параметров (англ. cross validation):
+from sklearn.model_selection import GridSearchCV
+model_params = best_model.get_params() tuned_params = {} for k, v in model_params.items(): tuned_params[k] = [v] tuned_params['n_neighbors'] = range(1, 30) clf = GridSearchCV(KNeighborsClassifier(), tuned_params, cv=10, n_jobs=-1) clf.fit(X_train, y_train) best_params = clf.best_params_
+- Оценка классификатора:
+from sklearn import metrics
+best_model = KNeighborsClassifier(**best_params) best_model.fit(X_train, y_train) predicted = best_model.predict(X_test)
+- Выводим результат:
+print('Used params:', best_params) print('Evaluation:\n', metrics.classification_report(y_test, predicted))
+> Used params: {'metric_params': None, 'metric': 'euclidean', 'weights': 'distance', 'n_neighbors': 9, 'leaf_size': 30, 'n_jobs': 4, 'p': 2, 'algorithm': 'auto'} Evaluation: precision recall f1-score support 0 0.90 1.00 0.95 69 1 1.00 0.82 0.90 45 micro avg 0.93 0.93 0.93 114 macro avg 0.95 0.91 0.92 114 weighted avg 0.94 0.93 0.93 114
+Пример на языке Scala
+SBT зависимость:
+libraryDependencies += "com.github.haifengl" %% "smile-scala" % "1.5.2"
+Пример классификации датасета и вычисления F1 меры[1] используя smile.classification.knn[2]:
+import smile.classification._ import smile.data._ import smile.plot._ import smile.read import smile.validation.FMeasure
+val toy: AttributeDataset = read.table("iris.csv", delimiter = ",", response = Some((new NumericAttribute("class"), 2))) val x: Array[Array[Double]] = toy.x() val y: Array[Int] = toy.y().map(_.toInt) val KNN: KNN[Array[Double]] = knn(x, y, 3) val predictions: Array[Int] = x.map(KNN.predict) val f1Score = new FMeasure().measure(predictions, y) plot(x, y, KNN)
+Пример на языке Java
+Пример классификации датасета с применением
+weka.classifiers.lazy.IBk[3]
+Maven зависимость:
+<dependency> <groupId>nz.ac.waikato.cms.weka</groupId> <artifactId>weka-stable</artifactId> <version>3.8.0</version> </dependency>
+import weka.classifiers.Evaluation; import weka.classifiers.lazy.IBk; import weka.core.converters.ConverterUtils;
+// read dataset and build knn-classifier var source = new ConverterUtils.DataSource("iris.csv"); var dataset = source.getDataSet(); var ibk = new IBk(); ibk.buildClassifier(dataset); // test the model var eTest = new Evaluation(dataset); eTest.evaluateModel(ibk, dataset); // print results summary var strSummary = eTest.toSummaryString(); System.out.println(strSummary);

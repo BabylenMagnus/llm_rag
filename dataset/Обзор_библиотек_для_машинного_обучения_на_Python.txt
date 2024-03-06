@@ -1,0 +1,160 @@
+Обзор библиотек для машинного обучения на Python
+Содержание
+- 1 Scikit-learn
+- 1.1 Описание
+- 1.2 Примеры кода
+- 1.2.1 Линейная регрессия
+- 1.2.2 Логистическая регрессия
+- 1.2.3 Перцептрон
+- 1.2.4 Метрический классификатор и метод ближайших соседей
+- 1.2.5 Дерево решений и случайный лес
+- 1.2.6 Обработка естественного языка
+- 1.2.7 Кросс-валилация и подбор параметров
+- 1.2.8 Метод опорных векторов (SVM)
+- 1.2.9 EM-алгоритм
+- 1.2.10 Уменьшение размерности
+- 2 Tensorflow
+- 3 Keras
+- 4 Другие библиотеки для машинного обучения на Python
+- 5 См. также
+- 6 Примечания
+Scikit-learn
+Описание
+Scikit-learn[1] — библиотека машинного обучения на языке программирования Python с открытым исходным кодом. Содержит реализации практически всех возможных преобразований, и нередко ее одной хватает для полной реализации модели. В данной библиотеки реализованы методы разбиения датасета на тестовый и обучающий, вычисление основных метрик над наборами данных, проведение Кросс-валидация[на 28.01.19 не создан]. В библиотеке также есть основные алгоритмы машинного обучения: линейной регрессии[на 28.01.19 не создан] и её модификаций Лассо, гребневой регрессии, опорных векторов[на 28.01.19 не создан], решающих деревьев и лесов и др. Есть и реализации основных методов кластеризации. Кроме того, библиотека содержит постоянно используемые исследователями методы работы с признаками: например, понижение размерности методом главных компонент[на 28.01.19 не создан]. Частью пакета является библиотека imblearn[2], позволяющая работать с разбалансированными выборками и генерировать новые значения.
+Примеры кода
+Линейная регрессия
+# Add required imports import matplotlib.pyplot as plt import numpy as np from sklearn import datasets from sklearn.linear_model import LinearRegression from sklearn.metrics import mean_squared_error, r2_score
+Загрузка датасета:
+diabetes = datasets.load_diabetes() # Use only one feature diabetes_X = diabetes.data[:, np.newaxis, 2]
+Разбиение датасета на тренировочный и тестовый:
+# Split the data into training/testing sets x_train = diabetes_X[:-20] x_test = diabetes_X[-20:] # Split the targets into training/testing sets y_train = diabetes.target[:-20] y_test = diabetes.target[-20:]
+Построение и обучение модели:
+lr = LinearRegression() lr.fit(x_train, y_train) predictions = lr.predict(x_test)
+Оценка алгоритма:
+# The mean squared error print("Mean squared error: %.2f" % mean_squared_error(y_test, predictions)) # Explained variance score: 1 is perfect prediction print('Variance score: %.2f' % r2_score(y_test, predictions))
+> Mean squared error: 2548.07 Variance score: 0.47
+Построение графика прямой, получившейся в результате работы линейной регрессии:
+plt.scatter(x_test, y_test, color='black') plt.plot(x_test, predictions, color='blue', linewidth=3) plt.xticks(()) plt.yticks(()) plt.show()
+Логистическая регрессия
+Загрузка датасета:
+from sklearn.datasets import load_digits digits = load_digits()
+Вывод первых трех тренировочных данных для визуализации:
+import numpy as np import matplotlib.pyplot as plt plt.figure(figsize=(20,4)) for index, (image, label) in enumerate(zip(digits.data[0:3], digits.target[0:3])): plt.subplot(1, 3, index + 1) plt.imshow(np.reshape(image, (8,8)), cmap=plt.cm.gray) plt.title('Training: %i\n' % label, fontsize = 20)
+Разбиение датасета на тренировочный и тестовый:
+from sklearn.model_selection import train_test_split x_train, x_test, y_train, y_test = train_test_split(digits.data, digits.target, test_size=0.25, random_state=0)
+Построение и обучение модели:
+from sklearn.linear_model import LogisticRegression lr = LogisticRegression() lr.fit(x_train, y_train) predictions = lr.predict(x_test)
+Оценка алгоритма:
+score = lr.score(x_test, y_test) print("Score: %.3f" % score)
+> Score: 0.953
+Перцептрон
+Загрузка датасета:
+from sklearn import datasets iris = datasets.load_iris() X = iris.data y = iris.target
+Разбиение датасета на тренировочный и тестовый:
+from sklearn.model_selection import train_test_split X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.20)
+Трансформация признаков:
+from sklearn.preprocessing import StandardScaler scaler = StandardScaler() scaler.fit(X_train) X_train = scaler.transform(X_train) X_test = scaler.transform(X_test)
+Построение и обучение модели:
+from sklearn.neural_network import MLPClassifier mlp = MLPClassifier(hidden_layer_sizes=(10, 10, 10), max_iter=1000) mlp.fit(X_train, y_train.values.ravel()) predictions = mlp.predict(X_test)
+Оценка алгоритма:
+from sklearn.metrics import classification_report, confusion_matrix print(confusion_matrix(y_test,predictions)) print(classification_report(y_test,predictions))
+> [[ 7 0 0] [ 0 8 1] [ 0 2 12]] precision recall f1-score support 0 1.00 1.00 1.00 7 1 0.80 0.89 0.84 9 2 0.92 0.86 0.89 14 micro avg 0.90 0.90 0.90 30 macro avg 0.91 0.92 0.91 30 weighted avg 0.90 0.90 0.90 30
+Метрический классификатор и метод ближайших соседей
+Дерево решений и случайный лес
+Обработка естественного языка
+Загрузка датасета:
+from sklearn import fetch_20newsgroups twenty_train = fetch_20newsgroups(subset='train', shuffle=True, random_state=42)
+Вывод первых трех строк первого тренивочного файла и его класса:
+print("\n".join(twenty_train.data[0].split("\n")[:3])) print(twenty_train.target_names[twenty_train.target[0]])
+> From: lerxst@wam.umd.edu (where's my thing) Subject: WHAT car is this!? Nntp-Posting-Host: rac3.wam.umd.edu rec.autos
+Построение и обучение двух моделей. Первая на основе Байесовской классификации[на 28.01.19 не создан], а вторая использует метод опорных векторов:
+from sklearn.pipeline import Pipeline from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer from sklearn.naive_bayes import MultinomialNB text_clf1 = Pipeline([ ('vect', CountVectorizer()), ('tfidf', TfidfTransformer()), ('clf', MultinomialNB()), ]) from sklearn.linear_model import SGDClassifier text_clf2 = Pipeline([ ('vect', CountVectorizer()), ('tfidf', TfidfTransformer()), ('clf', SGDClassifier(loss='hinge', penalty='l2', alpha=1e-3, random_state=42, max_iter=5, tol=None)), ]) text_clf1.fit(twenty_train.data, twenty_train.target) text_clf2.fit(twenty_train.data, twenty_train.target)
+Оценка алгоритмов:
+twenty_test = fetch_20newsgroups(subset='test', shuffle=True, random_state=42) docs_test = twenty_test.data predicted1 = text_clf1.predict(docs_test) predicted2 = text_clf2.predict(docs_test) print("Score: %.3f" % np.mean(predicted1 == twenty_test.target)) print("Score: %.3f" % np.mean(predicted2 == twenty_test.target))
+> Score for naive Bayes: 0.774 Score for SVM: 0.824
+Кросс-валилация и подбор параметров
+Возьмем предыдущий пример с обработкой естественного языка и попробуем увеличить точность алгоритма за счет кросс-валидации и подбора параметров:
+from sklearn.model_selection import GridSearchCV parameters = { 'vect__ngram_range': [(1, 1), (1, 2)], 'tfidf__use_idf': (True, False), 'clf__alpha': (1e-2, 1e-3), } gs_clf = GridSearchCV(text_clf2, parameters, cv=5, iid=False, n_jobs=-1) gs_clf = gs_clf.fit(twenty_train.data, twenty_train.target) print("Best score: %.3f" % gs_clf.best_score_) for param_name in sorted(parameters.keys()): print("%s: %r" % (param_name, gs_clf.best_params_[param_name]))
+> Best score: 0.904 clf__alpha: 0.001 tfidf__use_idf: True vect__ngram_range: (1, 2)
+Метод опорных векторов (SVM)
+Загрузка датасета:
+from sklearn import datasets iris = datasets.load_iris()
+Разбиение датасета на тестовый и тренировочный:
+from sklearn.model_selection import train_test_split x_train, x_test, y_train, y_test = train_test_split(iris.data, iris.target, test_size=0.25, random_state=0)
+Построение и обучение модели:
+clf = svm.SVC(kernel='linear', C=1.0) clf.fit(x_train, y_train) predictions = clf.predict(x_test)
+Оценка алгоритма:
+from sklearn.metrics import classification_report, confusion_matrix print(confusion_matrix(y_test,predictions)) print(classification_report(y_test,predictions))
+> [[13 0 0] [ 0 15 1] [ 0 0 9]] precision recall f1-score support 0 1.00 1.00 1.00 13 1 1.00 0.94 0.97 16 2 0.90 1.00 0.95 9 micro avg 0.97 0.97 0.97 38 macro avg 0.97 0.98 0.97 38 weighted avg 0.98 0.97 0.97 38
+EM-алгоритм
+import numpy as np import matplotlib.pyplot as plt from matplotlib.colors import LogNorm from sklearn import mixture n_samples = 300 # generate random sample, two components np.random.seed(0) # generate spherical data centered on (20, 20) shifted_gaussian = np.random.randn(n_samples, 2) + np.array([20, 20]) # generate zero centered stretched Gaussian data C = np.array([[0., -0.7], [3.5, .7]]) stretched_gaussian = np.dot(np.random.randn(n_samples, 2), C) # concatenate the two datasets into the final training set X_train = np.vstack([shifted_gaussian, stretched_gaussian]) # fit a Gaussian Mixture Model with two components clf = mixture.GaussianMixture(n_components=2, covariance_type='full') clf.fit(X_train) # display predicted scores by the model as a contour plot x = np.linspace(-20., 30.) y = np.linspace(-20., 40.) X, Y = np.meshgrid(x, y) XX = np.array([X.ravel(), Y.ravel()]).T Z = -clf.score_samples(XX) Z = Z.reshape(X.shape) CS = plt.contour(X, Y, Z, norm=LogNorm(vmin=1.0, vmax=1000.0), levels=np.logspace(0, 3, 10)) CB = plt.colorbar(CS, shrink=0.8, extend='both') plt.scatter(X_train[:, 0], X_train[:, 1], .8) plt.title('Negative log-likelihood predicted by a GMM') plt.axis('tight') plt.show()
+Уменьшение размерности
+Tensorflow
+Описание
+Tensorflow[3] — библиотека, разработанная корпорацией Google для работы с тензорами, используется для построения нейронных сетей. Поддержка вычислений на видеокартах имеет поддержку языка программирования C++. На основе данной библиотеки строятся более высокоуровневые библиотеки для работы с нейронными сетями на уровне целых слоев. Так, некоторое время назад популярная библиотека Keras стала использовать Tensorflow как основной бэкенд для вычислений вместо аналогичной библиотеки Theano. Для работы на видеокартах NVIDIA используется библиотека cuDNN. Если вы работаете с картинками (со сверточными нейросетями), скорее всего, придется использовать данную библиотеку.
+Примеры кода
+Сверточная нейронная сеть
+Реализация сверточной нейронной сети для классификации цифр из датасета MNIST:
+from __future__ import division, print_function, absolute_import import tensorflow as tf # Import MNIST data from tensorflow.examples.tutorials.mnist import input_data mnist = input_data.read_data_sets("/tmp/data/", one_hot=True) # Training Parameters learning_rate = 0.001 num_steps = 200 batch_size = 128 display_step = 10 # Network Parameters num_input = 784 # MNIST data input (img shape: 28*28) num_classes = 10 # MNIST total classes (0-9 digits) dropout = 0.75 # Dropout, probability to keep units # tf Graph input X = tf.placeholder(tf.float32, [None, num_input]) Y = tf.placeholder(tf.float32, [None, num_classes]) keep_prob = tf.placeholder(tf.float32) # dropout (keep probability) # Create some wrappers for simplicity def conv2d(x, W, b, strides=1): # Conv2D wrapper, with bias and relu activation x = tf.nn.conv2d(x, W, strides=[1, strides, strides, 1], padding='SAME') x = tf.nn.bias_add(x, b) return tf.nn.relu(x) def maxpool2d(x, k=2): # MaxPool2D wrapper return tf.nn.max_pool(x, ksize=[1, k, k, 1], strides=[1, k, k, 1], padding='SAME') # Create model def conv_net(x, weights, biases, dropout): # MNIST data input is a 1-D vector of 784 features (28*28 pixels) # Reshape to match picture format [Height x Width x Channel] # Tensor input become 4-D: [Batch Size, Height, Width, Channel] x = tf.reshape(x, shape=[-1, 28, 28, 1]) # Convolution Layer conv1 = conv2d(x, weights['wc1'], biases['bc1']) # Max Pooling (down-sampling) conv1 = maxpool2d(conv1, k=2) # Convolution Layer conv2 = conv2d(conv1, weights['wc2'], biases['bc2']) # Max Pooling (down-sampling) conv2 = maxpool2d(conv2, k=2) # Fully connected layer # Reshape conv2 output to fit fully connected layer input fc1 = tf.reshape(conv2, [-1, weights['wd1'].get_shape().as_list()[0]]) fc1 = tf.add(tf.matmul(fc1, weights['wd1']), biases['bd1']) fc1 = tf.nn.relu(fc1) # Apply Dropout fc1 = tf.nn.dropout(fc1, dropout) # Output, class prediction out = tf.add(tf.matmul(fc1, weights['out']), biases['out']) return out # Store layers weight & bias weights = { # 5x5 conv, 1 input, 32 outputs 'wc1': tf.Variable(tf.random_normal([5, 5, 1, 32])), # 5x5 conv, 32 inputs, 64 outputs 'wc2': tf.Variable(tf.random_normal([5, 5, 32, 64])), # fully connected, 7*7*64 inputs, 1024 outputs 'wd1': tf.Variable(tf.random_normal([7*7*64, 1024])), # 1024 inputs, 10 outputs (class prediction) 'out': tf.Variable(tf.random_normal([1024, num_classes])) } biases = { 'bc1': tf.Variable(tf.random_normal([32])), 'bc2': tf.Variable(tf.random_normal([64])), 'bd1': tf.Variable(tf.random_normal([1024])), 'out': tf.Variable(tf.random_normal([num_classes])) } # Construct model logits = conv_net(X, weights, biases, keep_prob) prediction = tf.nn.softmax(logits) # Define loss and optimizer loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits( logits=logits, labels=Y)) optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate) train_op = optimizer.minimize(loss_op) # Evaluate model correct_pred = tf.equal(tf.argmax(prediction, 1), tf.argmax(Y, 1)) accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32)) # Initialize the variables (i.e. assign their default value) init = tf.global_variables_initializer() # Start training with tf.Session() as sess: # Run the initializer sess.run(init) for step in range(1, num_steps+1): batch_x, batch_y = mnist.train.next_batch(batch_size) # Run optimization op (backprop) sess.run(train_op, feed_dict={X: batch_x, Y: batch_y, keep_prob: 0.8}) if step % display_step == 0 or step == 1: # Calculate batch loss and accuracy loss, acc = sess.run([loss_op, accuracy], feed_dict={X: batch_x, Y: batch_y, keep_prob: 1.0}) print("Step " + str(step) + ", Minibatch Loss= " + \ "{:.4f}".format(loss) + ", Training Accuracy= " + \ "{:.3f}".format(acc)) print("Optimization Finished!") # Calculate accuracy for 256 MNIST test images print("Testing Accuracy:", \ sess.run(accuracy, feed_dict={X: mnist.test.images[:256], Y: mnist.test.labels[:256], keep_prob: 1.0}))
+> Step 1, Minibatch Loss= 41724.0586, Training Accuracy= 0.156 Step 10, Minibatch Loss= 17748.7500, Training Accuracy= 0.242 Step 20, Minibatch Loss= 8307.6162, Training Accuracy= 0.578 Step 30, Minibatch Loss= 3108.5703, Training Accuracy= 0.766 Step 40, Minibatch Loss= 3273.2749, Training Accuracy= 0.727 Step 50, Minibatch Loss= 2754.2861, Training Accuracy= 0.820 Step 60, Minibatch Loss= 2467.7925, Training Accuracy= 0.844 Step 70, Minibatch Loss= 1423.8140, Training Accuracy= 0.914 Step 80, Minibatch Loss= 1651.4656, Training Accuracy= 0.875 Step 90, Minibatch Loss= 2105.9263, Training Accuracy= 0.867 Step 100, Minibatch Loss= 1153.5090, Training Accuracy= 0.867 Step 110, Minibatch Loss= 1751.1400, Training Accuracy= 0.898 Step 120, Minibatch Loss= 1446.2119, Training Accuracy= 0.922 Step 130, Minibatch Loss= 1403.7135, Training Accuracy= 0.859 Step 140, Minibatch Loss= 1089.7897, Training Accuracy= 0.930 Step 150, Minibatch Loss= 1147.0751, Training Accuracy= 0.898 Step 160, Minibatch Loss= 1963.3733, Training Accuracy= 0.883 Step 170, Minibatch Loss= 1544.2725, Training Accuracy= 0.859 Step 180, Minibatch Loss= 977.9219, Training Accuracy= 0.914 Step 190, Minibatch Loss= 857.7977, Training Accuracy= 0.930 Step 200, Minibatch Loss= 430.4735, Training Accuracy= 0.953 Optimization Finished! Testing Accuracy: 0.94140625
+Keras
+Описание
+Keras[4] — библиотека для построения нейронных сетей, поддерживающая основные виды слоев и структурные элементы. Поддерживает как рекуррентные, так и сверточные нейросети, имеет в своем составе реализацию известных архитектур нейросетей (например, VGG16). Некоторое время назад слои из данной библиотеки стали доступны внутри библиотеки Tensorflow. Существуют готовые функции для работы с изображениями и текстом. Интегрирована в Apache Spark с помощью дистрибутива dist-keras. Данная библиотека позволяет на более высоком уровне работать с нейронными сетями. В качестве библиотеки для бэкенда может использоваться как Tensorflow, так и Theano.
+Примеры кода
+Сверточная нейронная сеть
+Реализация сверточной нейронной сети для классификации текста:
+from __future__ import print_function from keras.preprocessing import sequence from keras.models import Sequential from keras.layers import Dense, Dropout, Activation from keras.layers import Embedding from keras.layers import Conv1D, GlobalMaxPooling1D from keras.datasets import imdb # set parameters: max_features = 5000 maxlen = 400 batch_size = 32 embedding_dims = 50 filters = 250 kernel_size = 3 hidden_dims = 250 epochs = 2 (x_train, y_train), (x_test, y_test) = imdb.load_data(num_words=max_features) print(len(x_train), 'train sequences') print(len(x_test), 'test sequences')
+> 25000 train sequences 25000 test sequences
+print('Pad sequences (samples x time)') x_train = sequence.pad_sequences(x_train, maxlen=maxlen) x_test = sequence.pad_sequences(x_test, maxlen=maxlen) print('x_train shape:', x_train.shape) print('x_test shape:', x_test.shape)
+> Pad sequences (samples x time) x_train shape: (25000, 400) x_test shape: (25000, 400)
+model = Sequential() model.add(Embedding(max_features, embedding_dims, input_length=maxlen)) model.add(Dropout(0.2)) model.add(Conv1D(filters, kernel_size, padding='valid', activation='relu', strides=1)) model.add(GlobalMaxPooling1D()) model.add(Dense(hidden_dims)) model.add(Dropout(0.2)) model.add(Activation('relu')) model.add(Dense(1)) model.add(Activation('sigmoid')) model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy']) model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs, validation_data=(x_test, y_test))
+> Train on 25000 samples, validate on 25000 samples Epoch 1/2 25000/25000 [==============================] - 136s 5ms/step - loss: 0.4107 - acc: 0.7923 - val_loss: 0.2926 - val_acc: 0.8746 Epoch 2/2 25000/25000 [==============================] - 136s 5ms/step - loss: 0.2294 - acc: 0.9082 - val_loss: 0.3200 - val_acc: 0.8652
+Другие библиотеки для машинного обучения на Python
+Вспомогательные библиотеки
+- NumPy[5] — библиотека, добавляющая поддержку больших многомерных массивов и матриц вместе с большой библиотекой высокоуровневых математических функций для операций с этими массивами. Данная библиотека предоставляет реализации вычислительных алгоритмов (в виде функций и операторов), оптимизированные для работы с многомерными массивами. В результате любой алгоритм, который может быть выражен в виде последовательности операций над массивами (матрицами) и реализованный с использованием NumPy, работает так же быстро, как эквивалентный код, выполняемый в MATLAB[6];
+- SciPy[7] — открытая библиотека высококачественных научных инструментов для языка программирования Python. SciPy содержит модули для оптимизации, интегрирования, специальных функций, обработки сигналов, обработки изображений, генетических алгоритмов, решения обыкновенных дифференциальных уравнений и других задач, обычно решаемых в науке и при инженерной разработке;
+- Pandas[8] — библиотека Python, которая является мощным инструментом для анализа данных. Пакет дает возможность строить сводные таблицы, выполнять группировки, предоставляет удобный доступ к табличным данным и позволяет строить графики на полученных наборах данных при помощи библиотеки Matplotlib;
+- Matplotlib[9] — библиотека Python для построения качественных двумерных графиков. Matplotlib является гибким, легко конфигурируемым пакетом, который вместе с NumPy, SciPy и IPython[10] предоставляет возможности, подобные MATLAB.
+- Autograd - Библиотека автодифференциирования функций на numpy. ПОзволяет делать простые нейросети и оптимизацию научных расчётов. Для тяжёлого лучше использовать GPU-библиотеки.
+- JAX - улучшенный autograd.
+- Tensor shape annotation lib - позволяет назначить измерениям тензора человекочитаемые метки
+Библиотеки для глубокого обучения
+- Tenzorflow[11] - открытая программная библиотека для машинного обучения, разработанная компанией Google для решения задач построения и тренировки нейронной сети с целью автоматического нахождения и классификации образов, достигая качества человеческого восприятия. Широко применяется в бизнес-приложениях.
+- PyTorch[12] — библиотека для глубокого обучения, созданная на базе Torch[13] и развиваемая компанией Facebook. Две ключевые функциональности данной библиотеки — тензорные вычисления с развитой поддержкой ускорения на GPU (OpenCL) и глубокие нейронные сети на базе системы autodiff;
+- Theano[14] — расширение языка программирования Python, позволяющее эффективно вычислять математические выражения, содержащие многомерные массивы. Библиотека предоставляет базовый набор инструментов для конфигурации нейронных сетей и их обучения. Наибольшее признание данная библиотека получила в задачах машинного обучения при решении задач оптимизации. Она позволяет использовать возможности GPU без изменения кода программы, что делает ее незаменимой при выполнении ресурсоемких задач;
+- Caffe[15] — фреймворк для обучения нейронных сетей, созданный университетом Беркли. Как и Tensorflow, использует cuDNN для работы с видеокартами NVIDIA;
+- Microsoft Cognitive Toolkit (CNTK)[16] — фреймворк от корпорации Microsoft, предоставляющий реализации архитектур различных нейронных сетей.
+- plaidml - ещё одна библиотека на OpenCL, умеющая компилировать граф в оптимизированные кастомные ядра OpenCL.
+Библиотеки для обработки естественного языка
+- NLTK[17] — пакет библиотек и программ для символьной и статистической обработки естественного языка, написанных на языке программирования Python;
+- Gensim[18] — инструмент для автоматической обработки языка, основанный на машинном обучении. В Gensim реализованы алгоритмы дистрибутивной семантики word2vec и doc2vec, он позволяет решать задачи тематического моделирования и выделять основные темы текста или документа.
+Библиотеки для градиентного бустинга
+- Xgboost[на 28.01.19 не создан][19] — библиотека с реализацией градиентного бустинга, которая для выбора разбиения использует сортировку и модели, основанные на анализе гистограмм;
+- LightGBM[20] — фреймворк с реализацией градиентного бустинга от корпорации Microsoft. Является частью проекта Microsoft DMTK, посвященного реализации подходов машинного обучения для .Net;
+- CatBoost[21] — библиотека с градиентным бустингом от компании Яндекс, в которой реализуется особый подход к обработке категориальных признаков, основанный на подмене категориальных признаков статистиками на основе предсказываемого значения.
+См. также
+- Примеры кода на Scala
+- Примеры кода на R[на 28.01.19 не создан]
+- Примеры кода на Java
+Примечания
+-  Библиотека scikit-learn
+-  Библиотека imbalanced-learn
+-  Библиотека Tensorflow
+-  Библиотека Keras
+-  Библиотека NumPy
+-  MATLAB
+-  Библиотека SciPy
+-  Библиотека Pandas
+-  Библиотека Matplotlib
+-  IPython Notebook
+-  https://www.tensorflow.org
+-  Библиотека PyTorch
+-  Torch
+-  Библиотека Theano
+-  Библиотека Caffe
+-  Библиотека CNTK
+-  Библиотека NLTK
+-  Библиотека Gensim
+-  Библиотека Xgboost
+-  Библиотека LightGBM
+-  Библиотека CatBoost

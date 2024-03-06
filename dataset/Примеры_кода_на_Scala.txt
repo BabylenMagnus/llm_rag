@@ -1,0 +1,173 @@
+Примеры кода на Scala
+Содержание
+- 1 Популярные библиотеки
+- 2 Примеры кода
+- 2.1 Линейная регрессия
+- 2.2 Вариации регрессии
+- 2.3 Логистическая регрессия
+- 2.4 Классификация при помощи MLP
+- 2.5 Рекуррентные нейронные сети
+- 2.6 Долгая краткосрочная память
+- 2.7 Обработка естественного языка
+- 2.8 Метрический классификатор и метод ближайших соседей
+- 2.9 Метод опорных векторов
+- 2.10 Дерево решений и случайный лес
+- 2.11 Байесовская классификация
+- 2.12 EM-алгоритм
+- 2.13 Бустинг, AdaBoost
+- 2.14 Уменьшение размерности
+- 3 Примечания
+Популярные библиотеки
+- Breeze[1] — библиотека, которая копирует реализует идеи строения структур данных из MATLAB[2] и NumPy[3]. Breeze позволяет быстро манипулировать данными и позволяет реализовать матричные и векторные операции, решать задачи оптимизации, обрабатывать сигналы устройств;
+- Epic[4] — часть ScalaNLP, позволяющая парсить и обрабатывать текст, поддерживающая использование GPU. Так же имеет фрэймворк для предсказаний текста;
+- Smpile[5] — развивающийся проект, похожий на scikit-learn[6], разработанный на Java и имеющий API для Scala. Имеет большой набор алгоритмов для решения задач классификации, регрессии, выбора фичей и другого;
+- Apache Spark MLlib[7] — построенная на Spark[8] имеет большой набор алгоритмов, написанный на Scala;
+- DeepLearning.scala [9] — набор инструментов для глубокого обучения[10]. Позволяет создавать динамические нейронные сети, давая возможность параллельных вычеслений.
+Примеры кода
+Линейная регрессия
+Sbt зависимость:
+libraryDependencies += "org.apache.spark" %% "spark-core" % "2.4.0" libraryDependencies += "org.apache.spark" %% "spark-mllib" % "2.4.0" % "runtime"
+Пример линейной регрессии c применением org.apache.spark.ml.regression.LinearRegression[11]:
+val training = spark.read.format("libsvm") .load("linear_regression.txt") val lr = new LinearRegression() .setMaxIter(10) .setRegParam(0.3) .setElasticNetParam(0.8) val lrModel = lr.fit(training)
+Вывод итоговых параметров модели:
+println(lrModel.coefficients) println(lrModel.intercept) val trainingSummary = lrModel.summary println(trainingSummary.totalIterations) println(trainingSummary.objectiveHistory.mkString(",")) trainingSummary.residuals.show() println(trainingSummary.rootMeanSquaredError) println(trainingSummary.r2)
+Вариации регрессии
+Sbt зависимость:
+libraryDependencies += "com.github.haifengl" %% "smile-scala" % "1.5.2"
+Пример ридж и лассо регрессии c применением smile.regression[12]:
+import smile.data.{AttributeDataset, NumericAttribute} import smile.read import smile.regression.{LASSO, RidgeRegression, lasso, ridge}
+val data: AttributeDataset = read.table("regression.txt", delimiter = " ", response = Some((new NumericAttribute("class"), 0))) val x: Array[Array[Double]] = data.x() val y: Array[Double] = data.y() val ridgeRegression: RidgeRegression = ridge(x, y, 0.0057) val lassoRegression: LASSO = lasso(x, y, 10) println(ridgeRegression) println(lassoRegression)
+Логистическая регрессия
+Sbt зависимость:
+libraryDependencies += "org.apache.spark" %% "spark-core" % "2.4.0" libraryDependencies += "org.apache.spark" %% "spark-mllib" % "2.4.0" % "runtime"
+Пример логистической регрессии c применением spark.mllib.classification[13]:
+import org.apache.spark.mllib.classification.{LogisticRegressionModel, LogisticRegressionWithLBFGS} import org.apache.spark.mllib.evaluation.MulticlassMetrics import org.apache.spark.mllib.regression.LabeledPoint import org.apache.spark.mllib.util.MLUtils
+val data = MLUtils.loadLibSVMFile(sc, "logisticRegresion.txt") val splits = data.randomSplit(Array(0.6, 0.4), seed = 11L) val training = splits(0).cache() val test = splits(1) val model = new LogisticRegressionWithLBFGS() .setNumClasses(10) .run(training)
+val predictionAndLabels = test.map { case LabeledPoint(label, features) => val prediction = model.predict(features) (prediction, label) } val metrics = new MulticlassMetrics(predictionAndLabels) val accuracy = metrics.accuracy println(accuracy)
+Классификация при помощи MLP
+Sbt зависимость:
+libraryDependencies += "com.github.haifengl" %% "smile-scala" % "1.5.2"
+Пример классификации c применением smile.classification.mlp[14]:
+import smile.classification.NeuralNetwork.{ActivationFunction, ErrorFunction} import smile.data.{AttributeDataset, NumericAttribute} import smile.read import smile.classification.mlp import smile.plot.plot
+val data: AttributeDataset = read.table("iris.csv", delimiter = ",", response = Some((new NumericAttribute("class"), 2))) val x: Array[Array[Double]] = data.x() val y: Array[Int] = data.y().map(_.toInt) val mlpModel = mlp(x, y, Array(2, 10, 2), ErrorFunction.LEAST_MEAN_SQUARES, ActivationFunction.LOGISTIC_SIGMOID) plot(x, y, mlpModel)
+Рекуррентные нейронные сети
+Пример кода, с использованием библиотеки DeepLearning.scala
+// Задание слоёв
+def tanh(x: INDArrayLayer): INDArrayLayer = {
+val exp_x = hyperparameters.exp(x)
+val exp_nx = hyperparameters.exp(-x)
+(exp_x - exp_nx) / (exp_x + exp_nx)
+}
+def charRNN(x: INDArray, y: INDArray, hprev: INDArrayLayer): (DoubleLayer, INDArrayLayer, INDArrayLayer) = {
+val hnext = tanh(wxh.dot(x) + whh.dot(hprev) + bh)
+val yraw = why.dot(hnext) + by
+val yraw_exp = hyperparameters.exp(yraw)
+val prob = yraw_exp / yraw_exp.sum
+val loss = -hyperparameters.log((prob * y).sum)
+(loss, prob, hnext)
+}
+// Определение структуры
+val batches = data.zip(data.tail).grouped(seqLength).toVector
+type WithHiddenLayer[A] = (A, INDArrayLayer)
+type Batch = IndexedSeq[(Char, Char)]
+type Losses = Vector[Double]
+def singleBatch(batch: WithHiddenLayer[Batch]): WithHiddenLayer[DoubleLayer] = {
+batch match {
+case (batchseq, hprev) => batchseq.foldLeft((DoubleLayer(0.0.forward), hprev)) {
+(bstate: WithHiddenLayer[DoubleLayer], xy: (Char, Char)) =>
+(bstate, xy) match {
+case ((tot, localhprev), (x, y)) => {
+charRNN(oneOfK(x), oneOfK(y), localhprev) match {
+case (localloss, _, localhnext) => {
+(tot + localloss, localhnext)
+}
+}
+}
+}
+}
+}
+}
+// Определение одного шага обучения
+def initH = INDArrayLayer(Nd4j.zeros(hiddenSize, 1).forward)
+def singleRound(initprevloss: Losses): Future[Losses] =
+(batches.foldLeftM((initprevloss, initH)) {
+(bstate: WithHiddenLayer[Losses], batch: Batch) =>
+bstate match {
+case (prevloss, hprev) => singleBatch(batch, hprev) match {
+case (bloss, hnext) => bloss.train.map {
+(blossval: Double) => {
+val nloss = prevloss.last * 0.999 + blossval * 0.001
+val loss_seq = prevloss :+ prevloss.last * 0.999 + blossval * 0.001
+(loss_seq, hnext)
+}
+}
+}
+}
+}).map {
+(fstate: WithHiddenLayer[Losses]) =>
+fstate match {
+case (floss, _) => floss
+}
+}
+def allRounds: Future[Losses] = (0 until 2048).foldLeftM(Vector(-math.log(1.0 / vocabSize) * seqLength)) {
+(ploss: Losses, round: Int) => {
+singleRound(ploss)
+}
+}
+// Обучение сети
+def unsafePerformFuture[A](f: Future[A]): A = Await.result(f.toScalaFuture, Duration.Inf)
+val losses = unsafePerformFuture(allRounds)
+Долгая краткосрочная память
+Основная статья: Долгая краткосрочная память.
+Пример реализации LSTM на основе DeepLearning4j[15] и ND4J[16]
+Обработка естественного языка
+Основная статья: Обработка естественного языка: Пример кода на языке Scala.
+Метрический классификатор и метод ближайших соседей
+Основная статья: Метрический классификатор и метод ближайших соседей: Пример на языке Scala.
+Метод опорных векторов
+Основная статья: Метод опорных векторов (SVM)[на 28.01.19 не создан].
+SBT зависимость:
+libraryDependencies += "com.github.haifengl" %% "smile-scala" % "1.5.2"
+Пример классификации датасета и вычисления F1 меры[17] используя smile.classification.svm[18]:
+import smile.classification._ import smile.data._ import smile.plot._ import smile.read import smile.validation.FMeasure
+val iris: AttributeDataset = read.table("iris.csv", delimiter = ",", response = Some((new NumericAttribute("class"), 2))) val x: Array[Array[Double]] = iris.x() val y: Array[Int] = iris.y().map(_.toInt) val SVM = svm(x, y, new GaussianKernel(8.0), 100) val predictions: Array[Int] = x.map(SVM.predict) val f1Score = new FMeasure().measure(predictions, y) plot(x, y, SVM)
+Дерево решений и случайный лес
+Основная статья: Дерево решений и случайный лес: Пример на языке Scala.
+Байесовская классификация
+Основная статья: Байесовская классификация.
+SBT зависимость:
+libraryDependencies += "com.tsukaby" %% "naive-bayes-classifier-scala" % "0.2.0"
+Пример классификации используя smile.classification.cart[19]:
+// Создание модели val bayes = new BayesClassifier[String, String]() // Задание соотвествия категория - слово bayes.learn("technology", "github" :: "git" :: "tech" :: "technology" :: Nil) bayes.learn("weather", "sun" :: "rain" :: "cloud" :: "weather" :: "snow" :: Nil) bayes.learn("government", "ballot" :: "winner" :: "party" :: "money" :: "candidate" :: Nil) // Тестовые примеры val unknownText1 = "I use git".split(" ") val unknownText2 = "Today's weather is snow".split(" ") val unknownText3 = "I will vote for that party".split(" ") // Классификация println(bayes.classify(unknownText1).map(_.category).getOrElse("")) // technology println(bayes.classify(unknownText2).map(_.category).getOrElse("")) // weather println(bayes.classify(unknownText3).map(_.category).getOrElse("")) // government
+EM-алгоритм
+Основная статья: EM-алгоритм[на 28.01.19 не создан].
+SBT зависимость:
+libraryDependencies += "com.github.haifengl" %% "smile-scala" % "1.5.2"
+Пример классификации используя smile.clustering.kmeans[20]:
+import smile.clustering._ import smile.data._ import smile.plot._ import smile.read
+val iris: AttributeDataset = read.table("iris.csv", delimiter = ",", response = Some((new NumericAttribute("class"), 2))) val x: Array[Array[Double]] = iris.x() val kMeans: KMeans = kmeans(x, k = 6, maxIter = 1000) val y = kMeans.getClusterLabel plot(x, y, '.', Palette.COLORS)
+Бустинг, AdaBoost
+Основная статья: Бустинг, AdaBoost: Пример на языке Scala.
+Уменьшение размерности
+Основная статья: Уменьшение размерности: Пример на языке Scala.
+Примечания
+-  Breeze
+-  MATLAB, structures
+-  ;NumPy wiki
+-  ScalaNLP, Epic
+-  Smile, Statistical Machine Intelligence and Learning Engine
+-  scikit-learn
+-  Apache Spark MLlib
+-  Apache Spark
+-  DeppLearning.scala
+-  Глубокое обучение
+-  Spark, LinearRegression
+-  Smile, Regression
+-  Spark, Logistic Regression
+-  Smile, MLP
+-  DeepLearning4j
+-  ND4J
+-  F1 мера
+-  Smile, SVM
+-  Naive bayes classifier, Scala
+-  Smile, K-Means

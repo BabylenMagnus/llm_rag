@@ -1,0 +1,45 @@
+Рекурсивные нейронные сети
+Рекурсивная нейронная сеть — тип глубокой нейронной сети, сформированный при применении одних и тех же наборов весов рекурсивно через структуру в виде дерева, чтобы сделать скалярное или структурированное предсказание над входными данными переменного размера через обход дерева в топологическом порядке.[1]
+Содержание
+Применение
+Модели рекурсивных сетей используют иерархические структуры образцов при обучении, поэтому они преуспели в следующих областях:
+- Обработка естественного языка. Модели используются для предсказания тональности предложения [2]:
+- Обработка изображений с природными ландшафтами[3].
+Описание
+При обучении последовательных структур и деревьев в задачах обработки естественного языка, фразы и предложения моделируются через векторное представление слов.
+Базовая структура сети является бинарным деревом, состоящим из родительского компонента (корня), и дочерних компонентов (листьев). Каждый компонент - набор нейронов, размер которого зависит от сложности входных данных. Входная последовательность данных подаётся на листья, а корень использует классификатор для определения класса и меры (score)
+Рекурсивная нейронная сеть использует следующую формулу для вычисления родительского вектора:
+- — дочерние векторы
+- — обученная матрица весов,
+- — нелинейную функция активации типа гиперболического тангенса
+- - cмещение, оно может быть добавлено в качестве дополнительного столбца к , если к конкатенации входных векторов добавляется 1.
+Родительские векторы должны иметь одинаковую размерность, чтобы быть рекурсивно совместимыми и использоваться в качестве входных данных для следующей композиции.
+Последующие шаги получают на вход меру предыдущего корня и следующее слово последовательности, таким образом пока в сети не будет сформировано дерево со всеми словами в последовательности.
+Деревья могут иметь разную структуру, выбор лучшей подструктуры дерева для сети основывается на их мере. Мера дерева - сумма мер на каждом узле:
+После выбора структуры, сеть классифицирует части последовательности. Вероятность принадлежности к классу вектора p вычисляется классификатором с помощью функции Softmax:
+Здесь— матрица классификаций. Основной задачей и разницей между моделями будет вычисление скрытых векторов снизу вверх.
+Алгоритм обратного распространения ошибки
+В рекурсивных нейронных сетях используется алгоритм обратного распространения ошибки (backpropagation) с некоторыми отличиями, вытекающими из древовидной структуры и рекурсии:
+- Сумма производных матрицы W от всех узлов. Можно предположить, что она разная на каждом узле, однако если взять отдельные производные от каждого вхождения, то получится то же самое.
+- Разделение производных в каждом узле. Во время прямого распространения, родительский вектор считается через дочерние узлы по формуле выше. Следовательно, ошибки должны быть вычислены относительно каждого из них, причём ошибка каждого дочернего узла является n-мерной
+Рекурсивные и рекуррентные нейронные сети
+Рекуррентная нейронная сеть представляет собой рекурсивную сеть со специфической структурой - в виде линейной цепочки. Рекурсивные сети работают на структурах общего типа, включающих иерархию, рекуррентные сети работают исключительно на линейной прогрессии во времени, связывая предыдущий момент времени со следующим через скрытый нейронный слой.[4]
+Примеры кода
+Опишем здесь пример построения сети, опустив построение дерева. Полный листинг кода для анализа тональности текста на PyTorch (из статьи Socher et al.(2013c))
+class RNTN(nn.Module): def __init__(self, word2index, hidden_size, output_size): super(RNTN,self).__init__() # Для рекурсивной нейронной сети обязательно нужно для векторное представление слов self.word2index = word2index self.embed = nn.Embedding(len(word2index), hidden_size) self.V = nn.ParameterList([nn.Parameter(torch.randn(hidden_size * 2, hidden_size * 2)) for _ in range(hidden_size)]) # Тензор self.W = nn.Parameter(torch.randn(hidden_size * 2, hidden_size)) self.b = nn.Parameter(torch.randn(1, hidden_size)) # bias self.W_out = nn.Linear(hidden_size, output_size) # инициализация весов def init_weight(self): nn.init.xavier_uniform(self.embed.state_dict()['weight']) nn.init.xavier_uniform(self.W_out.state_dict()['weight']) for param in self.V.parameters(): nn.init.xavier_uniform(param) nn.init.xavier_uniform(self.W) self.b.data.fill_(0) # прямое распространение def tree_propagation(self, node): recursive_tensor = OrderedDict() current = None if node.isLeaf: tensor = Variable(LongTensor([self.word2index[node.word]])) if node.word in self.word2index.keys() \ else Variable(LongTensor([self.word2index['<UNK>']])) current = self.embed(tensor) # 1xD else: recursive_tensor.update(self.tree_propagation(node.left)) recursive_tensor.update(self.tree_propagation(node.right)) concated = torch.cat([recursive_tensor[node.left], recursive_tensor[node.right]], 1) # 1x2D xVx = [] for i, v in enumerate(self.V): xVx.append(torch.matmul(torch.matmul(concated, v), concated.transpose(0, 1))) xVx = torch.cat(xVx, 1) # 1xD Wx = torch.matmul(concated, self.W) # 1xD current = F.tanh(xVx + Wx + self.b) # 1xD recursive_tensor[node] = current return recursive_tensor
+def forward(self, Trees, root_only=False): propagated = [] if not isinstance(Trees, list): Trees = [Trees] for Tree in Trees: recursive_tensor = self.tree_propagation(Tree.root) if root_only: recursive_tensor = recursive_tensor[Tree.root] propagated.append(recursive_tensor) else: recursive_tensor = [tensor for node,tensor in recursive_tensor.items()] propagated.extend(recursive_tensor) propagated = torch.cat(propagated) # (num_of_node in batch, D) return F.log_softmax(self.W_out(propagated),1)
+Обучение
+HIDDEN_SIZE = 30 BATCH_SIZE = 20 EPOCH = 20 LR = 0.01 LAMBDA = 1e-5 RESCHEDULED = False for epoch in range(EPOCH): losses = [] # learning rate annealing if RESCHEDULED == False and epoch == EPOCH // 2: LR *= 0.1 optimizer = optim.Adam(model.parameters(), lr=LR, weight_decay=LAMBDA) # L2 нормализация RESCHEDULED = True for i, batch in enumerate(getBatch(BATCH_SIZE, train_data)): if ROOT_ONLY: labels = [tree.labels[-1] for tree in batch] labels = Variable(LongTensor(labels)) else: labels = [tree.labels for tree in batch] labels = Variable(LongTensor(flatten(labels))) model.zero_grad() preds = model(batch, ROOT_ONLY) loss = loss_function(preds, labels) losses.append(loss.data.tolist()[0]) loss.backward() optimizer.step() if i % 100 == 0: print('[%d/%d] mean_loss : %.2f' % (epoch, EPOCH, np.mean(losses))) losses = []
+Примеры кода на TensorFlow:
+- https://github.com/bogatyy/cs224d/tree/master/assignment3
+- https://gist.github.com/anj1/504768e05fda49a6e3338e798ae1cddd
+Cм. также
+Примечания
+-  7 архитектур нейронных сетей для решения задач NLP
+-  Richard Socher, Cliff Chiung-Yu Lin, Andrew Y. Ng, Christopher D. Manning. Parsing Natural Scenes and Natural Language with Recursive Neural Networks
+-  Richard Socher, Cliff Chiung-Yu Lin, Andrew Y. Ng, Christopher D. Manning. Parsing Natural Scenes and Natural Language with Recursive Neural Networks
+-  Рекурсивные нейронные сети. Википедия
+Источники
+- [1] - Richard Socher, Alex Perelygin, Jean Y. Wu, Jason Chuang, Christopher D. Manning, Andrew Y. Ng, Christopher Potts. Recursive Deep Models for Semantic Compositionality Over a Sentiment Treebank. Stanford University, Stanford
+- [2] - Richard Socher. Wrap up: LSTMs and Recursive Neural Networks
+- [3] - Рекурсивные нейронные сети. Википедия
